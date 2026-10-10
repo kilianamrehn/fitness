@@ -29,7 +29,7 @@ let TODAY=ymd(NOW()), WK=wkKey(NOW());
 
 /* ---------------- Zustand ---------------- */
 let HISTORY,LOG,S;
-const DEFSET={mode:'zirkel',rounds:3,warm:true,sound:true,weights:[0,5,10,15]};
+const DEFSET={mode:'zirkel',rounds:3,sets:'auto',warm:true,sound:true,weights:[0,5,10,15]};
 function loadLocal(){
   HISTORY=sget('history',{});LOG=sget('log',{});S=sget('v5',null);
   if(!S){S={epoch:ymd(monday(NOW())),plan:null,week:null,rate:{},done:{},sessions:[],flags:{},settings:{}};}
@@ -52,7 +52,10 @@ function allowed(id){if(!EX[id])return false;const r=(window.REQ||{})[id];if(r&&
   return true;}
 function loadSrc(id){const r=(window.REQ||{})[id];if(!r||!r.load)return null;return r.load.find(has)||null;}
 function cfgOf(p){const m={10:{stations:4,rounds:2,warm:false},15:{stations:4,rounds:3,warm:true},20:{stations:5,rounds:3,warm:true},30:{stations:6,rounds:3,warm:true},45:{stations:8,rounds:4,warm:true,rest:30,rrest:90},60:{stations:10,rounds:4,warm:true,rest:30,rrest:90}}[p.dur]||{stations:4,rounds:3,warm:true};
-  const c={...m};if(p.level==='ein'&&p.dur<=20)c.rounds=Math.max(2,c.rounds-1);return c;}
+  const c={...m};if(p.level==='ein'&&p.dur<=20)c.rounds=Math.max(2,c.rounds-1);
+  c.auto=c.rounds;const o=typeof S!=='undefined'&&S&&S.settings&&S.settings.sets;if(o&&o!=='auto')c.rounds=+o;return c;}
+/* geschätzte Dauer, wenn die Satzzahl von der Automatik abweicht */
+function estMin(p){p=p||prof();const c=cfgOf(p);return Math.max(5,Math.round(p.dur*c.rounds/c.auto));}
 let SESS=[];
 function sessList(){const p=prof(),c=cfgOf(p);const seen={};
   const out=(WEEK_T[p.freq]||WEEK_T[3]).map(k=>{const t=SESS_T.find(x=>x.id===k)||SPLIT_T[k];seen[k]=(seen[k]||0)+1;
@@ -273,7 +276,7 @@ function doseChips(id){
   const x=EX[id];const ch=[];
   ch.push(x.tgt+(x.type==='time'?'':' Wdh')+(x.side?' pro Seite':''));
   const src=loadSrc(id);if(x.kg&&src){const k=fitKg(x.kg,id);if(k)ch.push((x.n2&&src!=='bb'?'2 × ':'')+k+' kg');}
-  if(x.type!=='run'&&['beine','zug','druck'].includes(x.cat))ch.push('1–2 RIR');
+  if(x.type!=='run'&&['beine','zug','druck'].includes(x.cat))ch.push('1–2 Wdh in Reserve');
   return ch;
 }
 function rateBar(id,ctx){
@@ -331,7 +334,7 @@ function sessCard(sid,sug){
   return `<div class="next"><div class="lbl">${sug&&sug.note?'Vorschlag':'Als Nächstes'}</div><div class="ttl">${esc(s.name)}</div><div class="sub">${esc(s.sub)}</div>
     ${sug&&sug.note?`<div class="note">${esc(sug.note)}</div>`:''}
     <div class="stgrid">${ex.map(e=>`<button class="stc" data-ex="${e.id}"><div class="fig" data-fig="${e.id}" data-aspect="1"></div><div class="nm">${esc(EX[e.id].n)}</div></button>`).join('')}</div>
-    <div class="btnrow"><button class="btn pri" data-start="${sid}">${I.play} Start · ≈${prof().dur} Min</button><button class="btn sec" data-short="${sid}">Express</button></div>
+    <div class="btnrow"><button class="btn pri" data-start="${sid}">${I.play} Start · ≈${estMin()} Min</button><button class="btn sec" data-short="${sid}">Express</button></div>
     <div class="hint">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(cfgOf(prof()).stations*1.2))} Minuten. Zählt trotzdem für die Woche.</div></div>`;
 }
 function renderHome(){
@@ -476,6 +479,7 @@ function openSettings(){
   const p=prof();const eqn=EQUIP.flatMap(g=>g[1]).filter(([k])=>has(k)).map(([,l])=>l);
   openSheet(`<h3>Einstellungen</h3><div style="height:14px"></div>
    <div class="setrow"><div><b>Ausrüstung und Plan</b><span>${p.freq}× Kraft à ${p.dur} Min${p.cardio!=='none'?' · '+p.cardioN+'× '+CARDIO[p.cardio].label:''} · ${esc(eqn.length?eqn.join(', '):'nur Körpergewicht')}</span></div><button class="chip" id="plan">Ändern</button></div>
+   <div class="setrow"><div><b>Sätze pro Übung</b><span>Auto = passend zur Dauer (${cfgOf(p).auto}). Eine Einheit dauert so ≈${estMin(p)} Min.</span></div>${seg('sets',[['auto','Auto'],[2,'2'],[3,'3'],[4,'4']])}</div>
    <div class="setrow"><div><b>Ausführung</b><span>Zirkel ist schneller, Sätze ruhiger</span></div>${seg('mode',[['zirkel','Zirkel'],['saetze','Sätze']])}</div>
    <div class="setrow"><div><b>Aufwärmen</b><span>An: vor jedem Training 2 Minuten lockere Bewegung, damit Gelenke und Puls bereit sind. Aus: direkt mit der ersten Übung starten. Überspringen geht auch im Training.</span></div>${seg('warm',[[true,'An'],[false,'Aus']])}</div>
    <div class="setrow"><div><b>Töne</b><span>Signal bei Timer-Ende</span></div>${seg('sound',[[true,'An'],[false,'Aus']])}</div>
@@ -483,7 +487,7 @@ function openSettings(){
    <div class="setrow"><div><b>Daten</b><span>Sichern und auf anderem Gerät laden</span></div><div style="display:flex;gap:6px"><button class="chip" id="exp">Sichern</button><button class="chip" id="imp">Laden</button></div></div>
    <input type="file" id="impf" accept="application/json,.json" style="display:none">
    ${window.CLOUD&&CLOUD.enabled?(CLOUD.user?`<div class="setrow"><div><b>Konto: ${esc(CLOUD.name||'')}</b><span>Daten werden synchronisiert</span></div><button class="chip" id="logout">Abmelden</button></div>`:`<div class="setrow"><div><b>Kein Konto</b><span>Daten nur auf diesem Gerät</span></div><button class="chip" id="login">Anmelden</button></div>`):''}
-   <div class="small" style="margin-top:10px">Version 5.1</div>`,
+   <div class="small" style="margin-top:10px">Version 5.3</div>`,
   sh=>{
     $$('[data-set]',sh).forEach(b=>b.onclick=()=>{let v=b.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;else if(!isNaN(+v))v=+v;S.settings[b.dataset.set]=v;save();openSettings();renderHome();});
     $('#plan',sh).onclick=()=>{closeSheet();showWizard(true);};
