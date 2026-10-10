@@ -164,7 +164,7 @@ window.EX={
 window.WARMUP=[
  {n:"Marschieren, Arme kreisen",src:"farmer",t:30,nodb:true},
  {n:"Kniebeugen ohne Gewicht",src:"goblet",t:30,nodb:true},
- {n:"Hüftbeuge ohne Gewicht",src:"rdl",t:30,nodb:true},
+ {n:"Hüftbeuge ohne Gewicht",src:"rdl",t:30,nodb:true,c:["Knie leicht gebeugt, Rücken lang","Hüfte nach hinten schieben","Nur so tief, wie der Rücken gerade bleibt"]},
  {n:"Band auseinanderziehen",src:"facepull",t:30},
 ];
 
@@ -314,8 +314,8 @@ window.SPLIT_T={
 window.WEEK_T={1:["S1"],2:["S1","S2"],3:["S1","S2","S3"],4:["U1","L1","U2","L2"],5:["U1","L1","U2","L2","M"],6:["U1","L1","U2","L2","U1","L2"],7:["U1","L1","U2","L2","U1","L2","M"]};
 window.CARDIO={run:{pool:"run",label:"Lauf",fig:"int44"},rope:{pool:"rope",label:"Seilspringen",fig:"seilspringen"},walk:{pool:"walk",label:"Gehen",fig:"farmer",nodb:true}};
 window.WARMUP=[
- {n:"Hampelmann oder auf der Stelle marschieren",src:"hampelmann",t:30},
- {n:"Kniebeugen ohne Gewicht",src:"kniebeuge",t:30},
- {n:"Hüftbeuge ohne Gewicht",src:"rdl",t:30,nodb:true},
- {n:"Arme kreisen, Schultern lockern",src:"seitheben",t:30,nodb:true},
+ {n:"Hampelmann oder auf der Stelle marschieren",src:"hampelmann",t:30,c:["Locker auf den Fußballen landen","Arme und Beine gleichzeitig","Nur so schnell, dass du noch reden kannst"]},
+ {n:"Kniebeugen ohne Gewicht",src:"kniebeuge",t:30,c:["Füße schulterbreit, Fersen bleiben am Boden","Knie zeigen in Richtung Zehen","Von Mal zu Mal etwas tiefer gehen"]},
+ {n:"Hüftbeuge ohne Gewicht",src:"rdl",t:30,nodb:true,c:["Knie leicht gebeugt, Rücken lang","Hüfte nach hinten schieben","Nur so tief, wie der Rücken gerade bleibt"]},
+ {n:"Arme kreisen, Schultern lockern",src:"seitheben",t:30,nodb:true,c:["Große, ruhige Kreise vor und zurück","Schultern tief, Nacken locker","Warm werden, nicht dehnen bis es zieht"]},
 ];

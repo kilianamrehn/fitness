@@ -29,7 +29,7 @@ let TODAY=ymd(NOW()), WK=wkKey(NOW());
 
 /* ---------------- Zustand ---------------- */
 let HISTORY,LOG,S;
-const DEFSET={mode:'zirkel',rounds:3,sets:'auto',warm:true,sound:true,weights:[0,5,10,15]};
+const DEFSET={mode:'zirkel',rounds:3,sets:'auto',vib:true,warm:true,sound:true,weights:[0,5,10,15]};
 function loadLocal(){
   HISTORY=sget('history',{});LOG=sget('log',{});S=sget('v5',null);
   if(!S){S={epoch:ymd(monday(NOW())),plan:null,week:null,rate:{},done:{},sessions:[],flags:{},settings:{}};}
@@ -243,7 +243,13 @@ let AC=null;
 function audio(){try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(e){}}
 function beep(f,dur,vol){if(!S.settings.sound||!AC)return;try{const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);o.frequency.value=f||880;o.type='sine';const t=AC.currentTime;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol||0.3,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+(dur||0.15));o.start(t);o.stop(t+(dur||0.15)+0.02);}catch(e){}}
 const tick=()=>beep(660,0.08,0.18);
-const ding=()=>{beep(880,0.16);setTimeout(()=>beep(1175,0.22),170);if(navigator.vibrate)navigator.vibrate([90,60,90]);};
+/* Vibration: Android über navigator.vibrate. iPhone kennt das nicht; dort löst ein verstecktes iOS-Schaltelement ein kurzes haptisches Klopfen aus (iOS 18+). */
+let HX=null;
+function haptic(n){if(S&&S.settings&&S.settings.vib===false)return;n=n||3;
+  if(navigator.vibrate){try{navigator.vibrate(n>1?[180,90,180,90,260]:[120]);}catch(e){}return;}
+  try{if(!HX){const l=document.createElement('label');l.setAttribute('aria-hidden','true');l.style.cssText='position:fixed;left:-200px;top:0;opacity:0.01;pointer-events:none';const i=document.createElement('input');i.type='checkbox';i.setAttribute('switch','');l.appendChild(i);document.body.appendChild(l);HX=l;}
+    for(let k=0;k<n;k++)setTimeout(()=>{try{HX.click();}catch(e){}},k*160);}catch(e){}}
+const ding=()=>{beep(880,0.16);setTimeout(()=>beep(1175,0.22),170);haptic(3);};
 let WL=null;
 async function wake(on){try{if(on&&'wakeLock' in navigator){WL=await navigator.wakeLock.request('screen');}else if(!on&&WL){await WL.release();WL=null;}}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&P.on)wake(true);});
@@ -261,17 +267,20 @@ function ytApi(cb){if(window.YT&&YT.Player)return cb();YTQ.push(cb);if(YTP)retur
   window.onYouTubeIframeAPIReady=()=>{while(YTQ.length)YTQ.shift()();};}
 function clipOf(vid){const c=(S.clip||{})[vid]||{};return {s:c.s||0,e:c.e||0};}
 let VP=null,VPT=null;
-function vidBox(vid){return `<div class="vwrap"><div class="vbox"><div id="ytp"></div></div><div class="vctl"><button data-clip="s">Clip ab hier</button><button data-clip="e">Ende hier</button><button data-clip="r">Zurücksetzen</button></div></div>`;}
+function vidBox(vid){return `<div class="vwrap"><div class="vbox"><div id="ytp"></div></div><div class="vctl"><button data-snd="1">${I.vol||''}Ton an</button><button data-clip="s">Clip ab hier</button><button data-clip="e">Ende hier</button><button data-clip="r">Zurücksetzen</button></div></div>`;}
 function vidMount(root,vid){
   clearInterval(VPT);try{VP&&VP.destroy&&VP.destroy();}catch(e){}VP=null;
   const host=$('#ytp',root);if(!host)return;
   const show=()=>{const c=clipOf(vid);const ctl=$('.vctl',root);if(ctl)ctl.dataset.info=c.s||c.e?`Clip ${c.s}s${c.e?' bis '+c.e+'s':''}`:'';};
   ytApi(()=>{if(!document.body.contains(host))return;const c=clipOf(vid);
-    VP=new YT.Player(host,{videoId:vid,width:'100%',height:'100%',playerVars:{autoplay:1,mute:1,playsinline:1,controls:0,rel:0,modestbranding:1,iv_load_policy:3,start:c.s,disablekb:1},
+    VP=new YT.Player(host,{videoId:vid,width:'100%',height:'100%',playerVars:{autoplay:1,mute:1,playsinline:1,controls:1,rel:0,modestbranding:1,iv_load_policy:3,start:c.s,fs:1},
       events:{onReady:e=>{e.target.mute();e.target.seekTo(clipOf(vid).s,true);e.target.playVideo();},
               onStateChange:e=>{if(e.data===0){e.target.seekTo(clipOf(vid).s,true);e.target.playVideo();}}}});
-    VPT=setInterval(()=>{try{const c=clipOf(vid);if(VP&&VP.getCurrentTime&&c.e&&VP.getCurrentTime()>=c.e)VP.seekTo(c.s,true);}catch(e){}},250);
+    let lastT=0;VPT=setInterval(()=>{try{const c=clipOf(vid);if(!VP||!VP.getCurrentTime)return;const t=VP.getCurrentTime();
+      // nur beim normalen Abspielen über das Clip-Ende zurückspringen, nicht wenn du selbst vorspulst
+      if(c.e&&t>=c.e&&lastT<c.e&&t-lastT<1.5)VP.seekTo(c.s,true);lastT=t;}catch(e){}},250);
   });
+  $$('[data-snd]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();try{if(VP.isMuted()){VP.unMute();VP.setVolume(100);b.textContent='Ton aus';}else{VP.mute();b.textContent='Ton an';}}catch(err){}});
   $$('[data-clip]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();S.clip=S.clip||{};const cur=S.clip[vid]||{};let t=0;try{t=Math.floor(VP.getCurrentTime());}catch(err){}
     if(b.dataset.clip==='s'){cur.s=t;if(cur.e&&cur.e<=t)delete cur.e;toast('Clip startet jetzt bei '+t+' s');}
     else if(b.dataset.clip==='e'){if(t>(cur.s||0)){cur.e=t;toast('Clip endet bei '+t+' s');VP.seekTo(cur.s||0,true);}}
@@ -493,11 +502,12 @@ function openSettings(){
    <div class="setrow"><div><b>Ausführung</b><span>Zirkel ist schneller, Sätze ruhiger</span></div>${seg('mode',[['zirkel','Zirkel'],['saetze','Sätze']])}</div>
    <div class="setrow"><div><b>Aufwärmen</b><span>An: vor jedem Training 2 Minuten lockere Bewegung, damit Gelenke und Puls bereit sind. Aus: direkt mit der ersten Übung starten. Überspringen geht auch im Training.</span></div>${seg('warm',[[true,'An'],[false,'Aus']])}</div>
    <div class="setrow"><div><b>Töne</b><span>Signal bei Timer-Ende</span></div>${seg('sound',[[true,'An'],[false,'Aus']])}</div>
+   <div class="setrow"><div><b>Vibration</b><span>Bei Timer-Ende. Auf dem iPhone ein kurzes Klopfen (ab iOS 18).</span></div>${seg('vib',[[true,'An'],[false,'Aus']])}</div>
    <div class="setrow"><div><b>Neue Übungsauswahl</b><span>Mischt alle Einheiten sofort neu</span></div><button class="chip" id="newblock">Neu mischen</button></div>
    <div class="setrow"><div><b>Daten</b><span>Sichern und auf anderem Gerät laden</span></div><div style="display:flex;gap:6px"><button class="chip" id="exp">Sichern</button><button class="chip" id="imp">Laden</button></div></div>
    <input type="file" id="impf" accept="application/json,.json" style="display:none">
    ${window.CLOUD&&CLOUD.enabled?(CLOUD.user?`<div class="setrow"><div><b>Konto: ${esc(CLOUD.name||'')}</b><span>Daten werden synchronisiert</span></div><button class="chip" id="logout">Abmelden</button></div>`:`<div class="setrow"><div><b>Kein Konto</b><span>Daten nur auf diesem Gerät</span></div><button class="chip" id="login">Anmelden</button></div>`):''}
-   <div class="small" style="margin-top:10px">Version 5.3</div>`,
+   <div class="small" style="margin-top:10px">Version 5.4</div>`,
   sh=>{
     $$('[data-set]',sh).forEach(b=>b.onclick=()=>{let v=b.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;else if(!isNaN(+v))v=+v;S.settings[b.dataset.set]=v;save();openSettings();renderHome();});
     $('#plan',sh).onclick=()=>{closeSheet();showWizard(true);};
@@ -593,7 +603,7 @@ function stepWarm(st){
   const w=st.w;
   shell(`<div class="pl-meta"><span class="st">Aufwärmen ${st.i+1}/${WARMUP.length}</span><span>${P.short?'':'2 Min'}</span></div>
     <div class="pl-media"><div class="fig" data-fig="${w.src}" data-aspect="1.3" ${w.nodb?'data-nodb="1"':''}></div></div>
-    <div class="pl-name">${esc(w.n)}</div><div class="pl-cues"><div>Locker, Puls langsam hoch. Erste Runde danach mit etwa 70 %.</div></div>`,
+    <div class="pl-name">${esc(w.n)}</div><div class="pl-cues">${(w.c||['Locker, Puls langsam hoch']).map(c=>`<div>· ${esc(c)}</div>`).join('')}<div class="pl-note">Danach die erste Runde mit etwa 70 % angehen.</div></div>`,
    `<div class="timer"><div class="tring" id="tr">${ringT(1)}<b id="tv">${w.t}</b></div></div>
     <div class="restbtns"><button class="btn ghost" id="skipw">Aufwärmen überspringen</button><button class="btn pri" id="nx" style="flex:0 0 auto;padding:0 18px">Weiter</button></div>`);
   countdown(w.t,l=>{const tv=$('#tv');if(tv){tv.textContent=l;$('#tr').innerHTML=ringT(l/w.t)+`<b id="tv">${l}</b>`;}},next);
@@ -636,7 +646,7 @@ function stepEx(st){
     <div class="pl-media" id="plm">${media}${v?`<button class="pl-vbtn" id="vt">${P.media==='v'?I.fig+' Animation':I.video+' Video'}</button>`:''}</div>
     <div class="pl-name">${esc(x.n)}</div>
     <div class="pl-sub">${doseChips(id).map(c=>`<span>${esc(c)}</span>`).join('')}${flag&&flag.hard?`<span class="g">Schwerer: ${esc(x.p)}</span>`:''}${(()=>{const pr=progressOf(id);if(!pr||(P.buf[id]&&P.buf[id].sets.length))return '';return pr.kg!=null?`<span class="up">${I.star} Steigern: ${pr.kg} kg</span>`:`<span class="up">${I.star} Steigern: ${esc(x.p)}</span>`;})()}</div>
-    <div class="pl-cues">${x.c.slice(0,2).map(c=>`<div>· ${esc(c)}</div>`).join('')}</div>
+    <div class="pl-cues">${x.c.map(c=>`<div>· ${esc(c)}</div>`).join('')}${x.e?`<div class="pl-warn">Achtung: ${esc(x.e)}</div>`:''}</div>
     <div class="pl-tools"><button class="th up ${rateOf(id)===1?'on':''}" data-rate="1" data-id="${id}">${I.up}</button><button class="th down ${rateOf(id)===-1?'on':''}" data-rate="-1" data-id="${id}">${I.down}</button><button id="swp">${I.swap} Tauschen</button><button id="skp">${I.skip} Überspringen</button><button id="inf">${I.info}</button></div>`,
    (time?`<div class="timer"><button class="iconbtn" id="tm">−</button><div class="tring" id="tr">${ringT(1)}<b id="tv">${mmss(P.val)}</b></div><button class="iconbtn" id="tp">+</button>${x.side?'<div class="tside" id="tsd">Seite 1</div>':''}</div>`
          :`${loadSrc(id)?`<div class="kgrow" id="kgrow"><span class="kgl">${loadSrc(id)==='bb'?'kg gesamt':x.n2?'kg je Hantel':'kg'}</span><div class="kgch">${weights(id).map(w=>`<button data-kgw="${w}" class="${w===P.kg?'on':''}">${w===0?'ohne':w}</button>`).join('')}</div></div>`:''}

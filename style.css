@@ -162,6 +162,8 @@ h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
 .pl-sub span.g{background:var(--bg);color:var(--ink2);}
 .pl-cues{font-size:14px;color:var(--ink2);margin-top:10px;}
 .pl-cues div{margin-bottom:3px;}
+.pl-cues .pl-warn{margin-top:6px;font-size:13px;color:var(--bad);font-weight:600;}
+.pl-cues .pl-note{margin-top:6px;font-size:12.5px;color:var(--ink3);}
 .pl-tools{display:flex;gap:8px;margin-top:12px;}
 .pl-tools button{font-size:12.5px;font-weight:600;padding:8px 11px;border-radius:10px;background:var(--bg);border:1px solid var(--line);color:var(--ink2);display:flex;align-items:center;gap:5px;}
 .pl-tools button svg{width:14px;height:14px;}
