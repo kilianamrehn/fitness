@@ -326,7 +326,8 @@ function exDetail(id){
       <div class="kv"><b>Muskeln:</b> ${esc(x.m)} · <b>Evidenz</b> ${esc(x.g)}</div>
       ${slot?`<div class="small" style="margin-top:6px">Aktuell in ${esc(slotLabel(slot))}</div>`:''}
       ${x.type!=='run'?rateBar(id):''}
-      ${v?`<div class="small" style="margin-top:12px">Video: ${esc(v.c)} · <a href="https://www.youtube.com/watch?v=${v.v}" target="_blank" rel="noopener" style="color:var(--ink3)">auf YouTube öffnen</a></div>`:''}`,
+      ${v?`<div class="small" style="margin-top:12px">Video: ${esc(v.c)} · <a href="https://www.youtube.com/watch?v=${v.v}" target="_blank" rel="noopener" style="color:var(--ink3)">auf YouTube öffnen</a></div>`:''}
+      ${x.src&&x.src.length?`<div class="flinks" style="margin-top:10px"><div class="small" style="margin-bottom:2px">Quellen zur Technik</div>${x.src.map(u=>{let h='';try{h=new URL(u).hostname.replace(/^www\./,'');}catch(e){}return `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(h)}</a>`;}).join('')}</div>`:''}`,
     sh=>{
       bindRate(sh,render);
       $$('.mtoggle button',sh).forEach(b=>b.onclick=()=>{
@@ -370,6 +371,7 @@ function renderHome(){
   const b=curBlock()+1, wib=weekInBlock();
   $('#v-home').innerHTML=`
    <div class="top"><div><div class="date">${esc(dateStr)}</div><h1>Heute</h1></div><button class="iconbtn" id="gear" aria-label="Einstellungen">${I.gear}</button></div>
+   ${!isStandalone()&&!S.settings.instSeen?installCard():''}
    <div class="weekbar"><div class="ring">${ringSvg(Math.min(1,cnt/tot),cnt>=goal?'var(--good)':'var(--accent)')}<b>${cnt}/${tot}</b></div>
      <div style="flex:1"><div class="wkpills">${SESS.map(s=>`<span class="pill ${dn[s.id]?'done':''}">${dn[s.id]?I.check:''}${s.run?esc(s.name):s.name.replace('Ganzkörper ','')}</span>`).join('')}</div>
      <div class="wkmeta"><span>Ziel: ${goal} von ${tot}</span><span>${streak()} ${streak()===1?'Woche':'Wochen'} in Folge</span></div></div></div>
@@ -386,6 +388,7 @@ function renderHome(){
   $$('#v-home [data-markrun]').forEach(b=>b.onclick=()=>{const sid=b.dataset.markrun;markDone(sid);S.sessions.push({d:TODAY,sid,ex:runIdOf(sid),manual:true});save();toast('Abgehakt.');renderAll();});
   $$('#v-home [data-ex]').forEach(b=>b.onclick=()=>exDetail(b.dataset.ex));
   $$('#v-home [data-sess]').forEach(b=>b.onclick=()=>sessSheet(b.dataset.sess));
+  const ib=$('#v-home #instb');if(ib)ib.onclick=()=>{S.settings.instSeen=true;save();showInstall();renderHome();};
 }
 function sessSheet(sid){
   const s=SESS.find(x=>x.id===sid);const done=doneWk()[sid];
@@ -474,21 +477,21 @@ function renderProg(){
 
 /* ---------------- Wissen ---------------- */
 const FACTS=[
- ["Wochenvolumen zählt, nicht der Plan-Typ","B","Bei gleicher Satzzahl pro Woche ist es fast egal, ob du sie auf zwei oder sechs Tage verteilst. Der Ertrag pro Einheit flacht nach zwei, drei harten Sätzen pro Muskel ab, also lohnt das Verteilen. Bis 3× pro Woche ist Ganzkörper am effizientesten. Ab 4× wechseln Ober- und Unterkörper, damit jede Region 48 Stunden Pause hat."],
- ["Was dir Spaß macht, darf bleiben","B","Selbst gewählte Übungen steigern Motivation und Dabeibleiben bei gleichen Kraftzuwächsen. Wie sich Training währenddessen anfühlt, sagt das Weitermachen am besten vorher. Daumen runter ist deshalb kein Luxus, sondern Teil der Methode. Das Bewegungsmuster bleibt immer besetzt, damit nichts Wichtiges rausfällt."],
- ["Vier Wochen pro Auswahl","C","Jede Übung kommt ein- bis zweimal pro Woche. Erst nach drei, vier Einheiten ist Fortschritt sichtbar, die erste geht fürs Einpendeln drauf. Deshalb wechselt die Auswahl alle vier Wochen. Tauschen geht jederzeit."],
- ["Morgens keine Rumpfbeugung unter Last","B","Die Bandscheiben sind nach dem Aufstehen prall gefüllt, die Biegebelastung liegt in der ersten Stunde deutlich höher. Wer früh Beugung vermeidet, hat in Studien weniger Rückenschmerz. Darum: keine Sit-ups, kein Jefferson Curl morgens, Hüftbeuge nie als erste Station, erste Runde mit etwa 70 %."],
- ["Zirkel kostet nichts","B","Gepaarte Sätze sparen gut ein Drittel Zeit ohne Verlust an Kraft oder Muskel. Zwischen zwei Sätzen derselben Übung liegen sowieso drei andere Stationen. Es fühlt sich nur anstrengender an."],
- ["Leichte Gewichte reichen länger als gedacht","A","Leichte Last baut Muskel, solange du nah an die Grenze gehst. Wird ein Gewicht zu leicht, helfen erst einbeinige Varianten, langsames Tempo und kurze Pausen. Danach ist das nächstschwerere Gewicht der größte einzelne Hebel."],
- ["Das Hohlkreuz ist nicht die Ursache","B","Menschen mit Rückenschmerz haben altersbereinigt eher weniger Lordose, nicht mehr. Ziel ist Belastbarkeit, nicht Haltungskorrektur. Kein Übungstyp ist dabei zuverlässig überlegen."],
- ["Laufen hilft dem Rücken doppelt","B","Ein einfaches Gehprogramm senkte Rückfälle um 28 % und verdoppelte fast die schmerzfreie Zeit. Eine Laufeinheit pro Woche erhält die Ausdauer, steigert sie aber kaum. Wer VO2max wirklich heben will, braucht eine zweite."],
- ["Nah an die Grenze, nicht drüber","B","Training bis 1 bis 2 Wiederholungen vor dem Versagen bringt praktisch dasselbe wie echtes Versagen. Kein Pressen, keine Quälerei."],
- ["Marker sind keine Hebel","B","Griffkraft und Co. sagen Lebenserwartung vorher, aber gezieltes Training der Zahl ist nicht als Ursache belegt. Krafttraining insgesamt ist es, mit einem Optimum bei etwa 30 bis 60 Minuten pro Woche. Genau da liegst du."],
- ["Wann Training pausiert","!","Taubheit im Reithosenbereich, Blasen- oder Darmprobleme, zunehmende Lähmung, Fieber mit Rückenschmerz, ungewollter Gewichtsverlust, starker Nachtschmerz. Dann ärztlich abklären statt trainieren."],
+ ["Wochenvolumen zählt, nicht der Plan-Typ", "B", "Bei gleicher Satzzahl pro Woche ist es fast egal, ob du sie auf zwei oder sechs Tage verteilst. Für Kraft bringt pro Einheit schon ab etwa zwei harten Sätzen pro Muskel kaum noch mehr, für Muskelaufbau flacht der Ertrag später ab. Verteilen lohnt sich also. Bis 3× pro Woche ist Ganzkörper am effizientesten. Ab 4× wechseln Ober- und Unterkörper, damit jede Region 48 Stunden Pause hat.", [["Schoenfeld 2019, J Sports Sci (Frequenz-MA)", "https://doi.org/10.1080/02640414.2018.1555906"], ["Remmert, Pelland 2025, SportRxiv (Volumen pro Einheit)", "https://sportrxiv.org/index.php/server/preprint/view/537"]]],
+ ["Was dir Spaß macht, darf bleiben", "B", "Selbst gewählte oder abwechselnde Übungen bringen in kleinen Studien gleiche Kraft- und Muskelzuwächse, Abwechslung steigerte dort die Motivation. Wie sich Training währenddessen anfühlt, sagt vorher, ob du dabeibleibst. Daumen runter ist deshalb kein Luxus, sondern Teil der Methode. Das Bewegungsmuster bleibt immer besetzt, damit nichts Wichtiges rausfällt.", [["Rauch 2020, J Strength Cond Res", "https://pubmed.ncbi.nlm.nih.gov/29016481/"], ["Baz-Valle 2019, PLoS One", "https://doi.org/10.1371/journal.pone.0226989"], ["Rhodes & Kates 2015, Ann Behav Med", "https://doi.org/10.1007/s12160-015-9704-5"]]],
+ ["Vier Wochen pro Auswahl", "C", "Jede Übung kommt ein- bis zweimal pro Woche. Erst nach drei, vier Einheiten ist Fortschritt sichtbar, die erste geht fürs Einpendeln drauf. Deshalb wechselt die Auswahl alle vier Wochen. Tauschen geht jederzeit.", [["Kassiano 2022, J Strength Cond Res (Review Variation)", "https://doi.org/10.1519/JSC.0000000000004258"], ["Kassiano 2024, Res Q Exerc Sport", "https://doi.org/10.1080/02701367.2024.2409961"], ["Baz-Valle 2019, PLoS One", "https://doi.org/10.1371/journal.pone.0226989"]]],
+ ["Morgens keine Rumpfbeugung unter Last", "B", "Die Bandscheiben sind nach dem Aufstehen prall gefüllt, die Biegebelastung ist frühmorgens deutlich höher als später am Tag. In einer randomisierten Studie hatten Menschen, die morgens Beugung vermieden, weniger Rückenschmerz. Darum: keine Sit-ups, kein Jefferson Curl morgens, Hüftbeuge nie als erste Station, erste Runde mit etwa 70 %.", [["Adams, Dolan, Hutton 1987, Spine", "https://pubmed.ncbi.nlm.nih.gov/3589804/"], ["Snook 1998, Spine (RCT)", "https://pubmed.ncbi.nlm.nih.gov/9854759/"], ["Snook 2002, J Occup Rehabil (3-J-Follow-up)", "https://search.pedro.org.au/search-results/record-detail/3390"]]],
+ ["Zirkel kostet nichts", "B", "Gepaarte Sätze sparen gut ein Drittel Zeit ohne Verlust an Kraft oder Muskel. Zwischen zwei Sätzen derselben Übung liegen sowieso drei andere Stationen. Es fühlt sich nur anstrengender an.", [["Zhang, Weakley 2025, Sports Med (Supersatz-MA)", "https://doi.org/10.1007/s40279-025-02176-8"]]],
+ ["Leichte Gewichte reichen länger als gedacht", "A", "Leichte Last baut Muskel, solange du nah an die Grenze gehst. Wird ein Gewicht zu leicht, helfen erst einbeinige Varianten, langsames Tempo und kurze Pausen. Danach ist das nächstschwerere Gewicht der größte einzelne Hebel.", [["Schoenfeld 2017, J Strength Cond Res (Last-MA)", "https://doi.org/10.1519/JSC.0000000000002200"], ["Lopez 2021, Med Sci Sports Exerc (Netzwerk-MA)", "https://doi.org/10.1249/MSS.0000000000002585"]]],
+ ["Das Hohlkreuz ist nicht die Ursache", "B", "Menschen mit Rückenschmerz haben altersbereinigt eher weniger Lordose, nicht mehr. Ziel ist Belastbarkeit, nicht Haltungskorrektur. Kein Übungstyp ist dabei klar überlegen, die Unterschiede zwischen den Formen sind klein und unsicher.", [["Chun 2017, Spine J (Lordose-MA)", "https://pubmed.ncbi.nlm.nih.gov/28476690/"], ["Hayden 2021, Cochrane Review", "https://doi.org/10.1002/14651858.CD009790.pub2"], ["Owen 2020, Br J Sports Med (Netzwerk-MA)", "https://bjsm.bmj.com/content/54/21/1279"]]],
+ ["Laufen hilft dem Rücken doppelt", "B", "Ein einfaches Gehprogramm senkte Rückfälle um 28 % und verdoppelte fast die schmerzfreie Zeit. Zum Erhalt der Ausdauer reichen etwa zwei Einheiten pro Woche, wenn die Intensität bleibt. Eine Laufeinheit pro Woche bremst den Abbau, wer VO2max wirklich heben will, braucht mehr.", [["Pocovi 2024, Lancet (WalkBack-RCT)", "https://doi.org/10.1016/S0140-6736(24)00755-4"], ["Spiering 2021, J Strength Cond Res (Erhaltungsdosis)", "https://doi.org/10.1519/JSC.0000000000003964"]]],
+ ["Nah an die Grenze, nicht drüber", "B", "Training bis 1 bis 2 Wiederholungen vor dem Versagen bringt praktisch dasselbe wie echtes Versagen. Kein Pressen, keine Quälerei.", [["Refalo 2024, J Sports Sci (0 vs. 1-2 RIR)", "https://doi.org/10.1080/02640414.2024.2321021"], ["Grgic 2022, J Sport Health Sci (Versagen-MA)", "https://doi.org/10.1016/j.jshs.2021.01.007"], ["Robinson 2024, Sports Med (RIR-Dosis-Wirkung)", "https://doi.org/10.1007/s40279-024-02069-2"]]],
+ ["Marker sind keine Hebel", "B", "Griffkraft und Co. sagen Lebenserwartung vorher, aber dass gezieltes Training dieser Zahl das Leben verlängert, ist nicht belegt. Für Krafttraining insgesamt zeigen Kohortenstudien das geringste Sterberisiko bei etwa 30 bis 60 Minuten pro Woche.", [["Leong 2015, Lancet (PURE, Griffkraft)", "https://doi.org/10.1016/S0140-6736(14)62000-6"], ["Momma 2022, Br J Sports Med (Kraft und Mortalität)", "https://bjsm.bmj.com/content/56/13/755"]]],
+ ["Wann Training pausiert", "!", "Taubheit im Reithosenbereich, Blasen- oder Darmprobleme, zunehmende Lähmung, Fieber mit Rückenschmerz, ungewollter Gewichtsverlust, starker Nachtschmerz. Dann ärztlich abklären statt trainieren.", [["Finucane 2020, JOSPT (Red-Flag-Framework)", "https://doi.org/10.2519/jospt.2020.9971"], ["IFOMPT 2020, Red-Flag-Framework (Volltext)", "https://www.ifompt.org/site/ifompt/International%20Framework%20for%20Red%20Flags%20for%20Potential%20Serious%20Spinal%20Pathologies%20master%20copy%20.pdf"], ["NICE NG59, Kreuzschmerz und Ischias", "https://www.nice.org.uk/guidance/ng59"]]],
 ];
 function renderKnow(){
   $('#v-know').innerHTML=`<div class="top"><div><div class="date">Warum der Plan so ist</div><h1>Wissen</h1></div></div>
-   ${FACTS.map(([h,g,p])=>`<div class="fact"><h4>${esc(h)}<i>${g==='!'?'Wichtig':'Evidenz '+g}</i></h4><p>${esc(p)}</p></div>`).join('')}
+   ${FACTS.map(([h,g,p,L])=>`<div class="fact"><h4>${esc(h)}<i>${g==='!'?'Wichtig':'Evidenz '+g}</i></h4><p>${esc(p)}</p>${L&&L.length?`<div class="flinks">${L.map(([t,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join('')}</div>`:''}</div>`).join('')}
    <div class="small" style="margin:14px 2px">Evidenz A: mehrere Studien oder Metaanalysen. B: einzelne Studien oder konsistente Kohorten. C: plausibel, wenig direkte Daten.</div>`;
 }
 
@@ -499,6 +502,7 @@ function openSettings(){
   const p=prof();const eqn=EQUIP.flatMap(g=>g[1]).filter(([k])=>has(k)).map(([,l])=>l);
   openSheet(`<h3>Einstellungen</h3><div style="height:14px"></div>
    <div class="setrow"><div><b>Ausrüstung und Plan</b><span>${p.freq}× Kraft à ${p.dur} Min${p.cardio!=='none'?' · '+p.cardioN+'× '+CARDIO[p.cardio].label:''} · ${esc(eqn.length?eqn.join(', '):'nur Körpergewicht')}</span></div><button class="chip" id="plan">Ändern</button></div>
+   ${isStandalone()?'':`<div class="setrow"><div><b>Als App installieren</b><span>Icon auf den Home-Bildschirm, startet ohne Browser</span></div><button class="chip" id="inst">Anleitung</button></div>`}
    <div class="setrow"><div><b>Sätze pro Übung</b><span>Auto = passend zur Dauer (${cfgOf(p).auto}). Eine Einheit dauert so ≈${estMin(p)} Min${(S.sessions||[]).filter(x=>x.est).length>=2?' (nach deinem Tempo)':''}.</span></div>${seg('sets',[['auto','Auto'],[2,'2'],[3,'3'],[4,'4']])}</div>
    <div class="setrow"><div><b>Ausführung</b><span>Zirkel ist schneller, Sätze ruhiger</span></div>${seg('mode',[['zirkel','Zirkel'],['saetze','Sätze']])}</div>
    <div class="setrow"><div><b>Aufwärmen</b><span>An: vor jedem Training 2 Minuten lockere Bewegung, damit Gelenke und Puls bereit sind. Aus: direkt mit der ersten Übung starten. Überspringen geht auch im Training.</span></div>${seg('warm',[[true,'An'],[false,'Aus']])}</div>
@@ -508,10 +512,11 @@ function openSettings(){
    <div class="setrow"><div><b>Daten</b><span>Sichern und auf anderem Gerät laden</span></div><div style="display:flex;gap:6px"><button class="chip" id="exp">Sichern</button><button class="chip" id="imp">Laden</button></div></div>
    <input type="file" id="impf" accept="application/json,.json" style="display:none">
    ${window.CLOUD&&CLOUD.enabled?(CLOUD.user?`<div class="setrow"><div><b>Konto: ${esc(CLOUD.name||'')}</b><span>Daten werden synchronisiert</span></div><button class="chip" id="logout">Abmelden</button></div>`:`<div class="setrow"><div><b>Kein Konto</b><span>Daten nur auf diesem Gerät</span></div><button class="chip" id="login">Anmelden</button></div>`):''}
-   <div class="small" style="margin-top:10px">Version 5.4</div>`,
+   <div class="small" style="margin-top:10px">Version 5.5</div>`,
   sh=>{
     $$('[data-set]',sh).forEach(b=>b.onclick=()=>{let v=b.dataset.val;if(v==='true')v=true;else if(v==='false')v=false;else if(!isNaN(+v))v=+v;S.settings[b.dataset.set]=v;save();openSettings();renderHome();});
     $('#plan',sh).onclick=()=>{closeSheet();showWizard(true);};
+    const ins=$('#inst',sh);if(ins)ins.onclick=()=>{closeSheet();setTimeout(showInstall,320);};
     const lo=$('#logout',sh);if(lo)lo.onclick=async()=>{await cloudPush();await CLOUD.signOut();localStorage.clear();location.reload();};
     const li=$('#login',sh);if(li)li.onclick=()=>{closeSheet();showLogin(true);};
     $('#newblock',sh).onclick=()=>{const prevSel=S.plan&&S.plan.sel;S.epoch=ymd(monday(NOW()));S.plan=prevSel?{block:-1,sel:prevSel,prev:null}:null;newPlan(0);save();toast('Neue Auswahl erstellt.');closeSheet();renderAll();};
@@ -794,6 +799,37 @@ function setTab(t){TAB=t;$$('.view').forEach(v=>{v.classList.toggle('on',v.id===
 /* ---------------- Konto ---------------- */
 const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 function pwField(id,ph,ac){return `<div class="pw"><input id="${id}" type="password" autocomplete="${ac}" placeholder="${ph}" autocapitalize="none" spellcheck="false"><button type="button" class="eye" data-eye="${id}" aria-label="Passwort zeigen">${EYE}</button></div>`;}
+
+/* ---------------- Als App installieren ---------------- */
+const isStandalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;}catch(e){return false;}};
+const platformOf=()=>{const u=navigator.userAgent||'';if(/iphone|ipad|ipod/i.test(u)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))return 'ios';if(/android/i.test(u))return 'android';return 'other';};
+let BIP=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();BIP=e;});
+try{if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');}catch(e){}
+const SHARE_I='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7.5 7.5L12 3l4.5 4.5"/><path d="M6 11H5a1 1 0 00-1 1v8a1 1 0 001 1h14a1 1 0 001-1v-8a1 1 0 00-1-1h-1"/></svg>';
+const PLUS_I='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg>';
+function installCard(){if(isStandalone())return '';return `<button class="instb" id="instb"><span class="ic">${PLUS_I}</span><span class="tx"><b>Als App installieren</b><span>Eigenes Icon, Vollbild, ohne Browserleiste</span></span><span class="ar">›</span></button>`;}
+function phoneAnim(p){
+  const home=`<div class="ph-home">${Array.from({length:11}).map(()=>'<i></i>').join('')}<i class="new"><img src="icon-192.png" alt=""><em>Training</em></i></div>`;
+  if(p==='ios')return `<div class="phone ios"><div class="ph-scr"><div class="ph-url">kilianamrehn.github.io</div><div class="ph-page"><b>Training</b><span></span><span></span><span></span></div>
+    <div class="ph-bar"><i></i><i></i><i class="tap">${SHARE_I}</i><i></i><i></i></div>
+    <div class="ph-sheet"><div>Kopieren</div><div>Zur Leseliste</div><div class="hi">Zum Home-Bildschirm ${PLUS_I}</div><div>Drucken</div></div>${home}</div></div>`;
+  return `<div class="phone and"><div class="ph-scr"><div class="ph-url">kilianamrehn.github.io<i class="tap dots">⋮</i></div><div class="ph-page"><b>Training</b><span></span><span></span><span></span></div>
+    <div class="ph-menu"><div>Neuer Tab</div><div>Lesezeichen</div><div class="hi">App installieren</div><div>Teilen</div></div>${home}</div></div>`;}
+function showInstall(){
+  let p=platformOf();if(p==='other')p='ios';
+  const draw=()=>{const steps=p==='ios'
+      ?['Öffne die Seite in <b>Safari</b> (in Chrome geht es auch über das Teilen-Symbol oben).','Tippe unten auf <b>Teilen</b>, das Quadrat mit dem Pfeil nach oben.','Wähle <b>Zum Home-Bildschirm</b>, ganz nach unten scrollen, falls nötig.','Tippe oben rechts auf <b>Hinzufügen</b>. Fertig, das Icon liegt auf dem Home-Bildschirm.']
+      :['Öffne die Seite in <b>Chrome</b>.','Tippe oben rechts auf die <b>drei Punkte</b>.','Wähle <b>App installieren</b> (manchmal heißt es „Zum Startbildschirm hinzufügen“).','Bestätige mit <b>Installieren</b>. Fertig, das Icon liegt auf dem Startbildschirm.'];
+    openSheet(`<h3>Als App installieren</h3><div class="small" style="margin:4px 0 12px">Die App ist eine Internetseite. Legst du sie auf den Home-Bildschirm, startet sie danach wie eine echte App: eigenes Icon, Vollbild, ohne Adressleiste. Deine Daten bleiben in deinem Konto.</div>
+      <div class="seg instseg"><button data-pl="ios" class="${p==='ios'?'on':''}">iPhone</button><button data-pl="android" class="${p==='android'?'on':''}">Android</button></div>
+      ${p==='android'&&BIP?'<button class="bigbtn" id="nativeinst" style="margin:12px 0">Jetzt installieren</button>':''}
+      ${phoneAnim(p)}
+      <ol class="inststeps">${steps.map(t=>`<li>${t}</li>`).join('')}</ol>
+      <div class="small">Danach öffnest du die App immer über das Icon, nicht mehr über den Browser.</div>`,
+      sh=>{$$('[data-pl]',sh).forEach(b=>b.onclick=()=>{p=b.dataset.pl;draw();});
+        const n=$('#nativeinst',sh);if(n)n.onclick=async()=>{try{BIP.prompt();await BIP.userChoice;BIP=null;closeSheet();}catch(e){}};});};
+  draw();
+}
 function showLogin(fromSettings){
   let mode='in';
   const el=$('#login');el.classList.add('on');
@@ -811,10 +847,11 @@ function showLogin(fromSettings){
     <button class="bigbtn" id="lgo">${T[mode][2]}</button>
     ${mode==='in'?'<button class="lglink" id="lgf">Passwort vergessen?</button>':''}
     <button class="lglink" id="lgs">${mode==='in'?'Neu hier? Registrieren':'Zurück zur Anmeldung'}</button>
-    ${fromSettings?'<button class="lglink" id="lgx">Abbrechen</button>':''}</div>`;
+    ${fromSettings?'<button class="lglink" id="lgx">Abbrechen</button>':''}${installCard()}</div>`;
     $$('[data-eye]',el).forEach(b=>b.onclick=()=>{const inp=$('#'+b.dataset.eye,el);const show=inp.type==='password';$$('.pw input',el).forEach(i=>i.type=show?'text':'password');$$('.eye',el).forEach(e=>e.classList.toggle('on',show));});
     $('#lgs',el).onclick=()=>{mode=mode==='in'?'up':'in';draw('',true);};
     const f=$('#lgf',el);if(f)f.onclick=()=>{mode='fg';draw('',true);};
+    const ib=$('#instb',el);if(ib)ib.onclick=showInstall;
     const x=$('#lgx',el);if(x)x.onclick=()=>el.classList.remove('on');
     const isMail=t=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(t),isName=t=>/^[a-zA-Z0-9äöüÄÖÜß._ -]{2,24}$/.test(t);
     $('#lgo',el).onclick=async()=>{const n=$('#lgn',el).value.trim(),pw=mode!=='fg'?$('#lgp',el).value:'',em=mode==='up'?$('#lge',el).value.trim():'';
