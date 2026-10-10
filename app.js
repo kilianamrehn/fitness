@@ -267,7 +267,7 @@ function ytApi(cb){if(window.YT&&YT.Player)return cb();YTQ.push(cb);if(YTP)retur
   window.onYouTubeIframeAPIReady=()=>{while(YTQ.length)YTQ.shift()();};}
 function clipOf(vid){const c=(S.clip||{})[vid]||{};return {s:c.s||0,e:c.e||0};}
 let VP=null,VPT=null;
-function vidBox(vid){return `<div class="vwrap"><div class="vbox"><div id="ytp"></div></div><div class="vctl"><button data-snd="1">${I.vol||''}Ton an</button><button data-clip="s">Clip ab hier</button><button data-clip="e">Ende hier</button><button data-clip="r">Zurücksetzen</button></div></div>`;}
+function vidBox(vid){return `<div class="vwrap"><div class="vbox"><div id="ytp"></div></div><div class="vctl"><button data-seek="-5">« 5 s</button><button data-seek="5">5 s »</button><button data-snd="1">Ton an</button><button data-clip="s">Clip ab hier</button><button data-clip="e">Ende hier</button><button data-clip="r">Zurücksetzen</button></div></div>`;}
 function vidMount(root,vid){
   clearInterval(VPT);try{VP&&VP.destroy&&VP.destroy();}catch(e){}VP=null;
   const host=$('#ytp',root);if(!host)return;
@@ -280,7 +280,8 @@ function vidMount(root,vid){
       // nur beim normalen Abspielen über das Clip-Ende zurückspringen, nicht wenn du selbst vorspulst
       if(c.e&&t>=c.e&&lastT<c.e&&t-lastT<1.5)VP.seekTo(c.s,true);lastT=t;}catch(e){}},250);
   });
-  $$('[data-snd]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();try{if(VP.isMuted()){VP.unMute();VP.setVolume(100);b.textContent='Ton aus';}else{VP.mute();b.textContent='Ton an';}}catch(err){}});
+  $$('[data-seek]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();try{const t=Math.max(0,VP.getCurrentTime()+(+b.dataset.seek));VP.seekTo(t,true);VP.playVideo();}catch(err){}});
+  $$('[data-snd]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();try{if(VP.isMuted()){VP.unMute();VP.setVolume(100);VP.playVideo();b.textContent='Ton aus';}else{VP.mute();b.textContent='Ton an';}}catch(err){}});
   $$('[data-clip]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();S.clip=S.clip||{};const cur=S.clip[vid]||{};let t=0;try{t=Math.floor(VP.getCurrentTime());}catch(err){}
     if(b.dataset.clip==='s'){cur.s=t;if(cur.e&&cur.e<=t)delete cur.e;toast('Clip startet jetzt bei '+t+' s');}
     else if(b.dataset.clip==='e'){if(t>(cur.s||0)){cur.e=t;toast('Clip endet bei '+t+' s');VP.seekTo(cur.s||0,true);}}
