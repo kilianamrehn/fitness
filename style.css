@@ -295,7 +295,7 @@ h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
 .pl-media .vwrap .vbox{height:min(46vh,420px);}
 .pl-media .vctl{background:var(--bg);}
 .pl-media .vctl button{background:var(--paper);}
-.pl-media:has(.vwrap) .pl-vbtn{bottom:56px;}
+.pl-media:has(.vwrap) .pl-vbtn{top:40px;bottom:auto;}
 .hint{font-size:12px;color:#a9a296;margin-top:10px;text-align:center;}
 .login{position:fixed;inset:0;background:var(--bg);z-index:80;display:none;overflow:auto;}
 .login.on{display:block;}
