@@ -55,7 +55,17 @@ function cfgOf(p){const m={10:{stations:4,rounds:2,warm:false},15:{stations:4,ro
   const c={...m};if(p.level==='ein'&&p.dur<=20)c.rounds=Math.max(2,c.rounds-1);
   c.auto=c.rounds;const o=typeof S!=='undefined'&&S&&S.settings&&S.settings.sets;if(o&&o!=='auto')c.rounds=+o;return c;}
 /* geschätzte Dauer, wenn die Satzzahl von der Automatik abweicht */
-function estMin(p){p=p||prof();const c=cfgOf(p);return Math.max(5,Math.round(p.dur*c.rounds/c.auto));}
+/* Dauer: aus den geplanten Übungen geschätzt (ca. 3 s pro Wiederholung, 10 s Einrichten pro Satz, Pausen, Aufwärmen),
+   danach mit der eigenen gemessenen Zeit kalibriert (Median der letzten 5 vollen Einheiten). */
+function rawEst(sid){const c=cfgOf(prof());const R=c.rounds;let ex=[];try{ex=sessEx(sid);}catch(e){}
+  if(!ex.length)return prof().dur*60*c.rounds/c.auto;
+  let t=(S.settings.warm&&c.warm)?120:0;
+  for(const e of ex){const x=EX[e.id];const le=lastEntry(e.id);const reps=(le&&le.sets&&le.sets.length)?le.sets.reduce((a,b)=>a+b,0)/le.sets.length:(+x.def||10);
+    const w=x.type==='time'?reps:reps*3;t+=R*((x.side?2*w:w)+10);}
+  const n=ex.length;t+=(n*R-R)*(c.rest||15)+(R-1)*(c.rrest||45)+60;return t;}
+function paceFactor(){const r=(S.sessions||[]).filter(x=>x.est&&x.min&&!x.short).slice(-5).map(x=>x.min*60/x.est).sort((a,b)=>a-b);
+  if(r.length<2)return 1;return Math.min(1.8,Math.max(0.6,r[Math.floor(r.length/2)]));}
+function estMin(p,sid){sid=sid||(SESS.find(x=>!x.run)||{}).id;return Math.max(4,Math.round(rawEst(sid)*paceFactor()/60));}
 let SESS=[];
 function sessList(){const p=prof(),c=cfgOf(p);const seen={};
   const out=(WEEK_T[p.freq]||WEEK_T[3]).map(k=>{const t=SESS_T.find(x=>x.id===k)||SPLIT_T[k];seen[k]=(seen[k]||0)+1;
@@ -334,7 +344,7 @@ function sessCard(sid,sug){
   return `<div class="next"><div class="lbl">${sug&&sug.note?'Vorschlag':'Als Nächstes'}</div><div class="ttl">${esc(s.name)}</div><div class="sub">${esc(s.sub)}</div>
     ${sug&&sug.note?`<div class="note">${esc(sug.note)}</div>`:''}
     <div class="stgrid">${ex.map(e=>`<button class="stc" data-ex="${e.id}"><div class="fig" data-fig="${e.id}" data-aspect="1"></div><div class="nm">${esc(EX[e.id].n)}</div></button>`).join('')}</div>
-    <div class="btnrow"><button class="btn pri" data-start="${sid}">${I.play} Start · ≈${estMin()} Min</button><button class="btn sec" data-short="${sid}">Express</button></div>
+    <div class="btnrow"><button class="btn pri" data-start="${sid}">${I.play} Start · ≈${estMin(null,sid)} Min</button><button class="btn sec" data-short="${sid}">Express</button></div>
     <div class="hint">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(cfgOf(prof()).stations*1.2))} Minuten. Zählt trotzdem für die Woche.</div></div>`;
 }
 function renderHome(){
@@ -479,7 +489,7 @@ function openSettings(){
   const p=prof();const eqn=EQUIP.flatMap(g=>g[1]).filter(([k])=>has(k)).map(([,l])=>l);
   openSheet(`<h3>Einstellungen</h3><div style="height:14px"></div>
    <div class="setrow"><div><b>Ausrüstung und Plan</b><span>${p.freq}× Kraft à ${p.dur} Min${p.cardio!=='none'?' · '+p.cardioN+'× '+CARDIO[p.cardio].label:''} · ${esc(eqn.length?eqn.join(', '):'nur Körpergewicht')}</span></div><button class="chip" id="plan">Ändern</button></div>
-   <div class="setrow"><div><b>Sätze pro Übung</b><span>Auto = passend zur Dauer (${cfgOf(p).auto}). Eine Einheit dauert so ≈${estMin(p)} Min.</span></div>${seg('sets',[['auto','Auto'],[2,'2'],[3,'3'],[4,'4']])}</div>
+   <div class="setrow"><div><b>Sätze pro Übung</b><span>Auto = passend zur Dauer (${cfgOf(p).auto}). Eine Einheit dauert so ≈${estMin(p)} Min${(S.sessions||[]).filter(x=>x.est).length>=2?' (nach deinem Tempo)':''}.</span></div>${seg('sets',[['auto','Auto'],[2,'2'],[3,'3'],[4,'4']])}</div>
    <div class="setrow"><div><b>Ausführung</b><span>Zirkel ist schneller, Sätze ruhiger</span></div>${seg('mode',[['zirkel','Zirkel'],['saetze','Sätze']])}</div>
    <div class="setrow"><div><b>Aufwärmen</b><span>An: vor jedem Training 2 Minuten lockere Bewegung, damit Gelenke und Puls bereit sind. Aus: direkt mit der ersten Übung starten. Überspringen geht auch im Training.</span></div>${seg('warm',[[true,'An'],[false,'Aus']])}</div>
    <div class="setrow"><div><b>Töne</b><span>Signal bei Timer-Ende</span></div>${seg('sound',[[true,'An'],[false,'Aus']])}</div>
@@ -520,7 +530,7 @@ function startSession(sid,short){
   }
   if(!short&&S.week.bonus[sid]&&S.week.bonus[sid].id&&!ex.some(e=>e.id===S.week.bonus[sid].id))steps.push({k:'bonus',id:S.week.bonus[sid].id,theme:S.week.bonus[sid].theme});
   steps.push({k:'end'});
-  Object.assign(P,{on:true,sid,short,steps,i:0,t0:Date.now(),buf:{},exIds:ex.map(e=>e.id),bonusDone:false,timer:null,media:'fig'});
+  Object.assign(P,{on:true,sid,short,est:short?null:rawEst(sid),steps,i:0,t0:Date.now(),buf:{},exIds:ex.map(e=>e.id),bonusDone:false,timer:null,media:'fig'});
   $('#player').classList.add('on');document.body.style.overflow='hidden';wake(true);
   renderStep();
 }
@@ -725,7 +735,7 @@ function finish(mins){
     const i=arr.findIndex(e=>e.d===TODAY);if(i>=0)arr[i]=ent;else arr.push(ent);LOG[id]=arr.slice(-60);}
   const exSteps=P.steps.filter(s=>s.k==='ex'&&!s.bonus).length;const doneSets=Object.entries(P.buf).filter(([id])=>!P.steps.find(s=>s.k==='ex'&&s.id===id&&s.bonus)).reduce((a,[,b])=>a+b.sets.length,0);
   if(doneSets>=Math.ceil(exSteps/2)||P.short){markDone(P.sid);}
-  S.sessions.push({d:TODAY,sid:P.sid,min:mins,short:P.short,bonus:P.bonusDone});
+  S.sessions.push({d:TODAY,sid:P.sid,min:mins,short:P.short,bonus:P.bonusDone,est:P.est||null});
   save();closePlayer();celebrate();
 }
 function celebrate(){const el=document.createElement('div');el.className='celebrate';el.innerHTML='<div class="c">'+I.check+'</div>';document.body.appendChild(el);setTimeout(()=>el.remove(),1000);if(navigator.vibrate)navigator.vibrate(60);}
@@ -891,5 +901,5 @@ function init(){
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!P.on){const t=ymd(NOW());if(t!==TODAY)renderAll();}});
 }
 window.addEventListener('DOMContentLoaded',init);
-window.__T={S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
+window.__T={estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
 })();
