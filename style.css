@@ -284,6 +284,7 @@ h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
 .lg .bigbtn{margin-top:8px;}
 .lglink{margin-top:16px;font-size:14px;font-weight:600;color:var(--ink2);}
 .lgerr{background:var(--bad-soft);color:var(--bad);border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:8px;}
+.lgerr.ok{background:var(--good-soft);color:var(--ink);}
 .pl-tools{flex-wrap:wrap;}
 .pl-tools{flex-wrap:nowrap;gap:6px;}
 .pl-tools button{padding:8px 9px;}

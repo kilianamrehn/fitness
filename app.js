@@ -731,25 +731,34 @@ function pwField(id,ph,ac){return `<div class="pw"><input id="${id}" type="passw
 function showLogin(fromSettings){
   let mode='in';
   const el=$('#login');el.classList.add('on');
-  const draw=(msg,keep)=>{const nv=keep&&$('#lgn',el)?$('#lgn',el).value:'';
-    el.innerHTML=`<div class="lg"><div class="date">Training</div><h1>${mode==='in'?'Anmelden':'Registrieren'}</h1>
-    <p class="small" style="margin:8px 0 18px">${mode==='in'?'Mit deinem Namen und Passwort.':'Such dir einen Namen und ein Passwort aus. Deine Trainingsdaten liegen dann in deinem Konto und sind auf jedem Gerät da.'}</p>
-    <input id="lgn" autocomplete="username" placeholder="Name" autocapitalize="none" spellcheck="false" value="${esc(nv)}">
-    ${pwField('lgp','Passwort (mind. 6 Zeichen)',mode==='in'?'current-password':'new-password')}
+  const T={in:['Anmelden','Mit deiner E-Mail und deinem Passwort.','Anmelden'],
+    up:['Registrieren','Name, E-Mail und ein Passwort. Deine Trainingsdaten liegen dann in deinem Konto und sind auf jedem Gerät da.','Konto erstellen'],
+    fg:['Passwort vergessen','Gib deine E-Mail ein. Du bekommst einen Link, mit dem du ein neues Passwort setzt.','Link schicken']};
+  const draw=(msg,keep,ok)=>{const v=id=>keep&&$('#'+id,el)?$('#'+id,el).value:'';const nv=v('lgn'),ev=v('lge');
+    el.innerHTML=`<div class="lg"><div class="date">Training</div><h1>${T[mode][0]}</h1>
+    <p class="small" style="margin:8px 0 18px">${T[mode][1]}</p>
+    ${mode==='up'?`<input id="lgn" autocomplete="nickname" placeholder="Dein Name" spellcheck="false" value="${esc(nv)}">`:''}
+    <input id="lge" type="email" inputmode="email" autocomplete="${mode==='up'?'email':'username'}" placeholder="E-Mail" autocapitalize="none" spellcheck="false" value="${esc(ev)}">
+    ${mode!=='fg'?pwField('lgp','Passwort (mind. 6 Zeichen)',mode==='in'?'current-password':'new-password'):''}
     ${mode==='up'?pwField('lgp2','Passwort wiederholen','new-password'):''}
-    ${msg?`<div class="lgerr">${esc(msg)}</div>`:''}
-    <button class="bigbtn" id="lgo">${mode==='in'?'Anmelden':'Konto erstellen'}</button>
-    <button class="lglink" id="lgs">${mode==='in'?'Neu hier? Registrieren':'Schon ein Konto? Anmelden'}</button>
+    ${msg?`<div class="lgerr${ok?' ok':''}">${esc(msg)}</div>`:''}
+    <button class="bigbtn" id="lgo">${T[mode][2]}</button>
+    ${mode==='in'?'<button class="lglink" id="lgf">Passwort vergessen?</button>':''}
+    <button class="lglink" id="lgs">${mode==='in'?'Neu hier? Registrieren':'Zurück zur Anmeldung'}</button>
     ${fromSettings?'<button class="lglink" id="lgx">Abbrechen</button>':''}</div>`;
     $$('[data-eye]',el).forEach(b=>b.onclick=()=>{const inp=$('#'+b.dataset.eye,el);const show=inp.type==='password';$$('.pw input',el).forEach(i=>i.type=show?'text':'password');$$('.eye',el).forEach(e=>e.classList.toggle('on',show));});
     $('#lgs',el).onclick=()=>{mode=mode==='in'?'up':'in';draw('',true);};
+    const f=$('#lgf',el);if(f)f.onclick=()=>{mode='fg';draw('',true);};
     const x=$('#lgx',el);if(x)x.onclick=()=>el.classList.remove('on');
-    $('#lgo',el).onclick=async()=>{const n=$('#lgn',el).value.trim(),pw=$('#lgp',el).value;
-      if(!/^[a-zA-Z0-9äöüÄÖÜß._-]{2,24}$/.test(n))return draw('Name: 2 bis 24 Zeichen, Buchstaben, Zahlen, Punkt oder Strich.',true);
-      if(pw.length<6)return draw('Passwort: mindestens 6 Zeichen.',true);
+    $('#lgo',el).onclick=async()=>{const em=$('#lge',el).value.trim(),pw=mode!=='fg'?$('#lgp',el).value:'';
+      if(mode==='up'){const n=$('#lgn',el).value.trim();if(n.length<2||n.length>30)return draw('Bitte einen Namen eingeben.',true);}
+      if(!(/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)||(mode==='in'&&/^[a-zA-Z0-9äöüÄÖÜß._-]{2,24}$/.test(em))))return draw('Bitte eine gültige E-Mail eingeben.',true);
+      if(mode!=='fg'&&pw.length<6)return draw('Passwort: mindestens 6 Zeichen.',true);
       if(mode==='up'&&pw!==$('#lgp2',el).value)return draw('Die beiden Passwörter stimmen nicht überein.',true);
       $('#lgo',el).disabled=true;$('#lgo',el).textContent='Moment …';
-      try{mode==='in'?await CLOUD.signIn(n,pw):await CLOUD.signUp(n,pw);}
+      try{if(mode==='in')await CLOUD.signIn(em,pw);
+        else if(mode==='up')await CLOUD.signUp($('#lgn',el).value,em,pw);
+        else{await CLOUD.reset(em);mode='in';draw('Mail ist unterwegs. Schau auch im Spam-Ordner nach. Danach hier mit dem neuen Passwort anmelden.',true,true);}}
       catch(e){draw(CLOUD.err(e),true);}};
   };
   draw();
