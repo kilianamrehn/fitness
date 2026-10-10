@@ -321,3 +321,8 @@ h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
 .wiz .opts{flex:none;}
 .opts.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;height:auto;align-content:start;align-self:stretch;}
 .opts.g2 .opt{width:100%;flex:none;height:50px;}
+.opts.g3,.opts.g4{display:grid;gap:8px;width:100%;}
+.opts.g3{grid-template-columns:repeat(3,1fr);}
+.opts.g4{grid-template-columns:repeat(7,1fr);gap:6px;}
+.opts.g4 .opt{padding:0;font-size:14px;}
+.opts.g3 .opt,.opts.g4 .opt{width:100%;flex:none;}

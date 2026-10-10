@@ -51,10 +51,13 @@ function has(k){const e=prof().eq;if(k==='db'||k==='kb')return (e[k]||[]).length
 function allowed(id){if(!EX[id])return false;const r=(window.REQ||{})[id];if(r&&r.rq&&!r.rq.some(g=>g.every(has)))return false;
   return true;}
 function loadSrc(id){const r=(window.REQ||{})[id];if(!r||!r.load)return null;return r.load.find(has)||null;}
-function cfgOf(p){const m={10:{stations:4,rounds:2,warm:false},15:{stations:4,rounds:3,warm:true},20:{stations:5,rounds:3,warm:true},30:{stations:6,rounds:3,warm:true}}[p.dur]||{stations:4,rounds:3,warm:true};
-  const c={...m};if(p.level==='ein')c.rounds=Math.max(2,c.rounds-1);return c;}
+function cfgOf(p){const m={10:{stations:4,rounds:2,warm:false},15:{stations:4,rounds:3,warm:true},20:{stations:5,rounds:3,warm:true},30:{stations:6,rounds:3,warm:true},45:{stations:8,rounds:4,warm:true,rest:30,rrest:90},60:{stations:10,rounds:4,warm:true,rest:30,rrest:90}}[p.dur]||{stations:4,rounds:3,warm:true};
+  const c={...m};if(p.level==='ein'&&p.dur<=20)c.rounds=Math.max(2,c.rounds-1);return c;}
 let SESS=[];
-function sessList(){const p=prof(),c=cfgOf(p);const out=SESS_T.slice(0,p.freq).map(t=>({...t,st:t.st.slice(0,c.stations)}));
+function sessList(){const p=prof(),c=cfgOf(p);const seen={};
+  const out=(WEEK_T[p.freq]||WEEK_T[3]).map(k=>{const t=SESS_T.find(x=>x.id===k)||SPLIT_T[k];seen[k]=(seen[k]||0)+1;
+    const id=seen[k]>1?k+String.fromCharCode(96+seen[k]):k;
+    return {...t,id,name:t.name+(seen[k]>1?' ('+seen[k]+'.)':''),st:t.st.slice(0,c.stations)};});
   if(p.cardio&&p.cardio!=='none'){for(let i=0;i<(p.cardioN||1);i++)out.push({id:i?'RUN2':'RUN',name:CARDIO[p.cardio].label+(i?' 2':''),run:true,ctype:p.cardio});}
   return out;}
 const isRun=sid=>/^RUN/.test(sid);
@@ -83,17 +86,26 @@ function weight(id,slot,prev,prev2){
   if(rateOf(id)===-1)return 0;
   let w=(BASEW[id]||1);
   if(rateOf(id)===1)w*=3;
+  // vorhandene Ausrüstung nutzen: Übungen mit Zusatzlast oder Gerät bevorzugen
+  const rq=(window.REQ||{})[id];
+  if(loadSrc(id))w*=4;else if(rq&&rq.rq&&rq.rq.some(g=>g.every(has)&&g.some(k=>k!=='chair')))w*=1.6;
+  if(prof().level==='ein'&&(window.ADVANCED||[]).includes(id))w*=0.05;
   if(prev&&prev[slot]===id){w*=rateOf(id)===1?1:0.3; if(prev2&&prev2[slot]===id)w*=0.05;}
   return w;
 }
+const fbOf=(k,pool)=>(window.POOL_FB&&POOL_FB[pool])||STATION_FALLBACK[k]||STATION_FALLBACK[(k||'').replace(/\d+$/,'')]||STATION_FALLBACK.x;
 function poolIds(pool,stKey){let ids=(POOLS[pool]||[]).filter(allowed);
-  if(!ids.length&&stKey)for(const fp of STATION_FALLBACK[stKey]||[]){ids=(POOLS[fp]||[]).filter(allowed);if(ids.length)break;}
+  if(!ids.length&&stKey)for(const fp of fbOf(stKey,pool)){ids=(POOLS[fp]||[]).filter(allowed);if(ids.length)break;}
   return ids;}
-function pickFor(slot,pool,used,seed,prev,prev2){
-  const stKey=slot.split('.')[1];
-  let ids=poolIds(pool,stKey).filter(id=>!used.has(id));
-  if(!ids.length)for(const fp of STATION_FALLBACK[stKey]||[]){ids=(POOLS[fp]||[]).filter(id=>allowed(id)&&!used.has(id));if(ids.length)break;}
-  if(!ids.length)ids=poolIds(pool,stKey);
+/* used: schon im Plan (wird gemieden), in derselben Einheit nie doppelt */
+function pickFor(slot,pool,used,seed,prev,prev2,sel){
+  const [sid,stKey]=slot.split('.');
+  const inSess=new Set(Object.entries(sel||(S.plan&&S.plan.sel)||{}).filter(([k,v])=>k.split('.')[0]===sid&&k!==slot&&v).map(([,v])=>v));
+  const ok=id=>!inSess.has(id);
+  let ids=poolIds(pool,stKey).filter(id=>ok(id)&&!used.has(id));
+  if(!ids.length)for(const fp of fbOf(stKey,pool)){ids=(POOLS[fp]||[]).filter(id=>allowed(id)&&ok(id)&&!used.has(id));if(ids.length)break;}
+  if(!ids.length)ids=poolIds(pool,stKey).filter(ok);
+  if(!ids.length)for(const fp of fbOf(stKey,pool)){ids=(POOLS[fp]||[]).filter(id=>allowed(id)&&ok(id));if(ids.length)break;}
   if(!ids.length)return null;
   let ws=ids.map(id=>weight(id,slot,prev,prev2));
   if(ws.every(w=>w===0))ws=ids.map(()=>1);
@@ -103,7 +115,7 @@ function slotsAll(){const out=[];for(const s of SESS){if(s.run)continue;for(cons
 function newPlan(b){
   const old=S.plan;const prev=old?old.sel:null, prev2=old?old.prev:null;
   const used=new Set(), sel={};
-  for(const sl of slotsAll()){const id=pickFor(sl.slot,sl.pool,used,'b'+b+S.epoch,prev,prev2);sel[sl.slot]=id;used.add(id);}
+  for(const sl of slotsAll()){const id=pickFor(sl.slot,sl.pool,used,'b'+b+S.epoch,prev,prev2,sel);sel[sl.slot]=id;if(id)used.add(id);}
   S.plan={block:b,sel,prev,user:{},checkedWk:WK};
 }
 function ensurePlan(){
@@ -158,10 +170,15 @@ function suggestion(){
     let nx=openS[0]||openR[0]||null;
     return {kind:'today',done:doneToday,next:nx};
   }
-  const ls=lastStrengthDate();
-  if(ls===yest){
-    if(runOpen)return {kind:'go',sid:openR[0],note:'Gestern war Krafttag. Heute Ausdauer oder Pause.'};
-    return {kind:'go',sid:openS[0],note:'Gestern war Krafttag. Wenn möglich heute Pause.'};
+  // 48 h je Muskelregion: was wurde gestern belastet?
+  const regOf=sid=>{const x=SESS.find(z=>z.id===sid);return x?(x.reg||'full'):'full';};
+  const clash=(a,b)=>a!=='light'&&b!=='light'&&(a==='full'||b==='full'||a===b);
+  const yReg=[];for(const wk in S.done)for(const sid in S.done[wk])if(!isRun(sid)&&S.done[wk][sid]===yest)yReg.push(regOf(sid));
+  if(yReg.length){
+    const free=openS.find(sid=>!yReg.some(r=>clash(r,regOf(sid))));
+    if(free)return {kind:'go',sid:free,note:free!==openS[0]?'Die eigentlich nächste Einheit trifft die Muskeln von gestern, deshalb heute diese.':null};
+    if(runOpen)return {kind:'go',sid:openR[0],note:'Gestern war Krafttag für dieselben Muskeln. Heute Ausdauer oder Pause.'};
+    return {kind:'go',sid:openS[0],note:'Gestern waren dieselben Muskeln dran. Wenn möglich heute Pause.'};
   }
   if(openS.length)return {kind:'go',sid:openS[0]};
   return {kind:'go',sid:openR[0]};
@@ -176,6 +193,7 @@ function figEx(id,opt){
   if(opt&&opt.nodb){ex=Object.assign({},ex,{props:(ex.props||[]).filter(p=>p.t!=='db')});}
   else if(EX[id]&&!(opt&&opt.raw)){const src=loadSrc(id);const r=(window.REQ||{})[id];
     if(src==='kb')ex=Object.assign({},ex,{props:(ex.props||[]).map(p=>p.t==='db'?{t:'kb',j:p.j,s:p.s}:p)});
+    else if(src==='bb')ex=Object.assign({},ex,{props:(ex.props||[]).filter(p=>!(p.t==='db'&&p.j==='ha2')).map(p=>p.t==='db'?{t:'bb',j:p.j}:p)});
     else if(r&&r.load&&!src&&!(r.rq||[]).length)ex=Object.assign({},ex,{props:(ex.props||[]).filter(p=>p.t!=='db')});}
   return ex;
 }
@@ -314,7 +332,7 @@ function sessCard(sid,sug){
     ${sug&&sug.note?`<div class="note">${esc(sug.note)}</div>`:''}
     <div class="stgrid">${ex.map(e=>`<button class="stc" data-ex="${e.id}"><div class="fig" data-fig="${e.id}" data-aspect="1"></div><div class="nm">${esc(EX[e.id].n)}</div></button>`).join('')}</div>
     <div class="btnrow"><button class="btn pri" data-start="${sid}">${I.play} Start · ≈${prof().dur} Min</button><button class="btn sec" data-short="${sid}">Express</button></div>
-    <div class="hint">Express: nur 1 Runde, etwa 5 Minuten. Zählt trotzdem für die Woche.</div></div>`;
+    <div class="hint">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(cfgOf(prof()).stations*1.2))} Minuten. Zählt trotzdem für die Woche.</div></div>`;
 }
 function renderHome(){
   ensurePlan();
@@ -366,7 +384,7 @@ function sessSheet(sid){
    ${bonus.id?`<h2>Bonus · optional · ${esc(bonus.theme)}</h2>
    <div class="excard" data-exd="${bonus.id}"><div class="fig" data-fig="${bonus.id}" data-aspect="1"></div><div class="t"><b>${esc(EX[bonus.id].n)}</b><span>2 Runden am Ende, wenn du Lust hast</span></div></div>`:''}
    <div class="btnrow" style="margin-top:16px"><button class="btn pri" id="go">${I.play} ${done?'Nochmal':'Start'}</button><button class="btn ghost" id="gos" style="flex:0 0 auto;padding:0 16px">Express</button></div>
-   <div class="small" style="margin-top:8px">Express: nur 1 Runde, etwa 5 Minuten, ohne Aufwärmen. Zählt trotzdem für die Woche.</div>`,
+   <div class="small" style="margin-top:8px">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(cfgOf(prof()).stations*1.2))} Minuten, ohne Aufwärmen. Zählt trotzdem für die Woche.</div>`,
   sh=>{bindRate(sh,()=>{sessSheet(sid);renderHome();});
     $$('[data-exd]',sh).forEach(c=>c.onclick=e=>{if(e.target.closest('button'))return;exDetail(c.dataset.exd);});
     $$('[data-swap]',sh).forEach(b=>b.onclick=e=>{e.stopPropagation();swapSheet(b.dataset.swap,()=>{sessSheet(sid);renderHome();});});
@@ -433,12 +451,12 @@ function renderProg(){
 
 /* ---------------- Wissen ---------------- */
 const FACTS=[
- ["Ganzkörper dreimal schlägt den Split","B","Bei gleicher Zeit bekommt jedes Grundmuster jetzt drei Reize pro Woche statt einem, insgesamt etwa 9 statt 3 harte Sätze. Der Ertrag pro Einheit flacht nach etwa zwei Sätzen ab, also lohnt das Verteilen."],
+ ["Wochenvolumen zählt, nicht der Plan-Typ","B","Bei gleicher Satzzahl pro Woche ist es fast egal, ob du sie auf zwei oder sechs Tage verteilst. Der Ertrag pro Einheit flacht nach zwei, drei harten Sätzen pro Muskel ab, also lohnt das Verteilen. Bis 3× pro Woche ist Ganzkörper am effizientesten. Ab 4× wechseln Ober- und Unterkörper, damit jede Region 48 Stunden Pause hat."],
  ["Was dir Spaß macht, darf bleiben","B","Selbst gewählte Übungen steigern Motivation und Dabeibleiben bei gleichen Kraftzuwächsen. Wie sich Training währenddessen anfühlt, sagt das Weitermachen am besten vorher. Daumen runter ist deshalb kein Luxus, sondern Teil der Methode. Das Bewegungsmuster bleibt immer besetzt, damit nichts Wichtiges rausfällt."],
- ["Vier Wochen pro Auswahl","C","Jede Übung kommt einmal pro Woche. Erst nach drei, vier Einheiten ist Fortschritt sichtbar, die erste geht fürs Einpendeln drauf. Deshalb wechselt die Auswahl alle vier Wochen. Tauschen geht jederzeit."],
+ ["Vier Wochen pro Auswahl","C","Jede Übung kommt ein- bis zweimal pro Woche. Erst nach drei, vier Einheiten ist Fortschritt sichtbar, die erste geht fürs Einpendeln drauf. Deshalb wechselt die Auswahl alle vier Wochen. Tauschen geht jederzeit."],
  ["Morgens keine Rumpfbeugung unter Last","B","Die Bandscheiben sind nach dem Aufstehen prall gefüllt, die Biegebelastung liegt in der ersten Stunde deutlich höher. Wer früh Beugung vermeidet, hat in Studien weniger Rückenschmerz. Darum: keine Sit-ups, kein Jefferson Curl morgens, Hüftbeuge nie als erste Station, erste Runde mit etwa 70 %."],
  ["Zirkel kostet nichts","B","Gepaarte Sätze sparen gut ein Drittel Zeit ohne Verlust an Kraft oder Muskel. Zwischen zwei Sätzen derselben Übung liegen sowieso drei andere Stationen. Es fühlt sich nur anstrengender an."],
- ["Die 15-kg-Hantel ist der Engpass","A","Leichte Last baut Muskel, solange du nah an die Grenze gehst. Für Beine und Druck wird 15 kg aber bald zu wenig. Erst helfen einbeinig, langsames Tempo und Pausen. Der größte einzelne Hebel wäre ein Paar 20 bis 24 kg."],
+ ["Leichte Gewichte reichen länger als gedacht","A","Leichte Last baut Muskel, solange du nah an die Grenze gehst. Wird ein Gewicht zu leicht, helfen erst einbeinige Varianten, langsames Tempo und kurze Pausen. Danach ist das nächstschwerere Gewicht der größte einzelne Hebel."],
  ["Das Hohlkreuz ist nicht die Ursache","B","Menschen mit Rückenschmerz haben altersbereinigt eher weniger Lordose, nicht mehr. Ziel ist Belastbarkeit, nicht Haltungskorrektur. Kein Übungstyp ist dabei zuverlässig überlegen."],
  ["Laufen hilft dem Rücken doppelt","B","Ein einfaches Gehprogramm senkte Rückfälle um 28 % und verdoppelte fast die schmerzfreie Zeit. Eine Laufeinheit pro Woche erhält die Ausdauer, steigert sie aber kaum. Wer VO2max wirklich heben will, braucht eine zweite."],
  ["Nah an die Grenze, nicht drüber","B","Training bis 1 bis 2 Wiederholungen vor dem Versagen bringt praktisch dasselbe wie echtes Versagen. Kein Pressen, keine Quälerei."],
@@ -492,7 +510,7 @@ function startSession(sid,short){
   if(S.settings.warm&&C.warm&&!short)WARMUP.forEach((w,i)=>steps.push({k:'warm',i,w}));
   if(mode==='zirkel'){
     for(let r=1;r<=R;r++)ex.forEach((e,i)=>{steps.push({k:'ex',id:e.id,slot:e.slot,st:i,r,R,n:ex.length});
-      const lastSt=i===ex.length-1;if(!(lastSt&&r===R))steps.push({k:'rest',t:lastSt?45:15,round:lastSt});});
+      const lastSt=i===ex.length-1;if(!(lastSt&&r===R))steps.push({k:'rest',t:lastSt?(short?45:C.rrest||45):(short?15:C.rest||15),round:lastSt});});
   }else{
     ex.forEach((e,i)=>{for(let r=1;r<=R;r++){steps.push({k:'ex',id:e.id,slot:e.slot,st:i,r,R,n:ex.length});if(!(i===ex.length-1&&r===R))steps.push({k:'rest',t:r===R?60:75});}});
   }
@@ -807,15 +825,16 @@ function showWizard(edit){
         ${ch&&on?`<div class="eqch">${k==='bb'?ch.map(w=>`<button class="${W.eq.bb===w?'on':''}" data-bb="${w}">${w} kg</button>`).join(''):ch.map(w=>`<button class="${(W.eq[k]||[]).includes(w)?'on':''}" data-w="${k}:${w}">${w}</button>`).join('')}</div>${k!=='bb'?'<div class="eqhint">kg pro Stück. Verstellbare Hanteln: alle einstellbaren Gewichte antippen.</div>':''}`:''}</div>`;}).join('')}</div>`).join('')}
       <button class="bigbtn" id="wn">Weiter</button>`;}
     else if(step===1){h=`<div class="date">Schritt 2 von 3</div><h1>Wie willst du trainieren?</h1>
-      <h2>Krafteinheiten pro Woche</h2><div class="opts">${[2,3,4].map(v=>opt('freq',v,v+'×',W.freq)).join('')}</div>
-      <h2>Dauer pro Einheit</h2><div class="opts">${[10,15,20,30].map(v=>opt('dur',v,v+' Min',W.dur)).join('')}</div>
+      <h2>Krafteinheiten pro Woche</h2><div class="opts g4">${[1,2,3,4,5,6,7].map(v=>opt('freq',v,v+'×',W.freq)).join('')}</div>
+      <h2>Dauer pro Einheit</h2><div class="opts g3">${[10,15,20,30,45,60].map(v=>opt('dur',v,v+' Min',W.dur)).join('')}</div>
+      <p class="small" style="margin-top:10px">${W.freq<=3?'Bis 3× pro Woche trainierst du jedes Mal den ganzen Körper.':'Ab 4× pro Woche wechseln sich Ober- und Unterkörper ab, so hat jede Muskelgruppe mindestens einen Tag Pause.'+(W.freq===5||W.freq===7?' Einer der Tage ist ein leichter Rumpf- und Mobilitätstag.':'')}</p>
       <h2>Ausdauer</h2><div class="opts g2">${[['run','Laufen'],['rope','Seilspringen'],['walk','Zügig gehen'],['none','Keine']].map(([v,l])=>opt('cardio',v,l,W.cardio)).join('')}</div>
       ${W.cardio!=='none'?`<h2>Ausdauer pro Woche</h2><div class="opts">${[1,2].map(v=>opt('cardioN',v,v+'×',W.cardioN)).join('')}</div>`:''}
       <h2>Erfahrung mit Krafttraining</h2><div class="opts">${[['ein','Einsteiger'],['fort','Fortgeschritten']].map(([v,l])=>opt('level',v,l,W.level)).join('')}</div>
       <button class="bigbtn" id="wn">Weiter</button><button class="lglink" id="wb">Zurück</button>`;}
     else{const c=cfgOf(W);const n=W.freq;h=`<div class="date">Schritt 3 von 3</div><h1>Dein Plan</h1>
-      <div class="plansum"><div><b>${n}×</b><span>Ganzkörper pro Woche</span></div><div><b>${W.dur}</b><span>Minuten</span></div><div><b>${c.stations}×${c.rounds}</b><span>Übungen × Runden</span></div></div>
-      <p class="lead">${W.cardio!=='none'?`Dazu ${W.cardioN}× ${CARDIO[W.cardio].label} pro Woche. `:''}Jede Einheit trainiert Druck, Beine, Zug und Rumpf. Die Übungen wechseln alle vier Wochen, tauschen kannst du jederzeit.</p>
+      <div class="plansum"><div><b>${n}×</b><span>${n<=3?'Ganzkörper':'Einheiten'} pro Woche</span></div><div><b>${W.dur}</b><span>Minuten</span></div><div><b>${c.stations}×${c.rounds}</b><span>Übungen × Runden</span></div></div>
+      <p class="lead">${W.cardio!=='none'?`Dazu ${W.cardioN}× ${CARDIO[W.cardio].label} pro Woche. `:''}${n<=3?'Jede Einheit trainiert Druck, Beine, Zug und Rumpf.':'Oberkörper- und Unterkörpertage wechseln sich ab, die Startseite schlägt nie zweimal hintereinander dieselben Muskeln vor.'} Die Übungen wechseln alle vier Wochen, tauschen kannst du jederzeit.</p>
       <p class="small">Ein Hinweis: Das hier ist eine Übungssammlung, kein persönliches Training. Bei Schmerzen oder Beschwerden lass dich von einer Fachperson beraten.</p>
       <button class="bigbtn" id="wn">${edit?'Speichern':'Plan erstellen'}</button><button class="lglink" id="wb">Zurück</button>${edit?'<button class="lglink" id="wx">Abbrechen</button>':''}`;}
     el.innerHTML=`<div class="lg wiz">${h}</div>`;el.scrollTop=0;
@@ -845,5 +864,5 @@ function init(){
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!P.on){const t=ymd(NOW());if(t!==TODAY)renderAll();}});
 }
 window.addEventListener('DOMContentLoaded',init);
-window.__T={S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan};
+window.__T={S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
 })();

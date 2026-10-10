@@ -840,7 +840,7 @@ const armTo=(S,H,pick,sd)=>{const s=ik2(S,H,29,26,pick);const k=sd||'';return {[
  const k1=(m,o)=>{const p=m===1?2:1;const q={};for(const k in o)q[k.replace('#',m).replace('$',p)]=o[k];return M(plk,q);};
  const LIFT={'thigh$':165,'shin$':166,'thigh#':150,'shin#':198,'foot#':125},
        UND={'thigh$':161,'shin$':164,'thigh#':96,'s_thigh#':0.84,'shin#':192,'foot#':175},
-       DRV={'thigh$':162,'shin$':165,'thigh#':24,'shin#':160,'foot#':178};
+       DRV={'thigh$':162,'shin$':165,'thigh#':4,'shin#':148,'foot#':170};
  const side=(m)=>{const pin={j:'to'+(m===1?2:1),y:FL-1};return [
    {a:plk,d:200,hold:120,pin},{a:k1(m,LIFT),d:220,pin},{a:k1(m,UND),d:260,pin},{a:k1(m,DRV),d:300,hold:200,pin},
    {a:k1(m,UND),d:240,pin},{a:k1(m,LIFT),d:220,pin}];};

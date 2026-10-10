@@ -120,7 +120,7 @@ window.EX={
  farmer:{n:"Bauerntragen",cat:"rumpf",pat:"Tragen",m:"Griff, Trapez, Rumpf",type:"time",tgt:"45 s",def:45,kg:15,n2:true,g:"C",
   c:["Zwei Hanteln, aufrecht gehen","Nacken lang, Schultern tief","Kleine, ruhige Schritte"],e:"Schultern hochziehen.",p:"Länger",r:"Kürzer"},
  copen:{n:"Copenhagen-Plank",cat:"rumpf",pat:"Anti-Lateralflexion, Adduktoren",m:"Adduktoren, seitlicher Rumpf",type:"time",side:true,tgt:"20 s",def:20,kg:null,g:"B",
-  c:["Seitstütz, oberes Knie auf dem Stuhl","Becken aktiv anheben","Unteres Bein hängt frei"],e:"Becken sinkt.",p:"Fuß statt Knie auflegen",r:"Unteres Bein stützt mit"},
+  c:["Seitstütz, oberes Knie auf dem Stuhl","Becken aktiv anheben","Unteres Bein locker darunter, schwerer: zum Stuhl heben"],e:"Becken sinkt.",p:"Fuß statt Knie auflegen",r:"Unteres Bein stützt mit"},
  plank:{n:"Plank mit Schultertippen",cat:"rumpf",pat:"Anti-Rotation",m:"Rumpf",type:"reps",side:true,tgt:"8",def:8,kg:null,g:"C",
   c:["Hoher Stütz, Füße breit","Abwechselnd Schulter antippen","Hüfte bleibt ruhig"],e:"Hüfte schaukelt.",p:"Füße enger",r:"Füße weiter"},
 
@@ -241,16 +241,16 @@ Object.assign(window.EX,{
    load = Gewichtsquelle (optional, wenn nicht in rq). Haushalt: Tür, Wand, Boden, Handtuch gibt es immer. */
 window.REQ={
  bulgarian:{rq:[["chair"],["bench"]],load:["db","kb"]}, goblet:{rq:[["db"],["kb"]],load:["db","kb"]}, rueckausfall:{load:["db","kb"]},
- rdl:{rq:[["db"]],load:["db"]}, slrdl:{load:["db","kb"]}, swing:{rq:[["db"],["kb"]],load:["kb","db"]}, slthrust:{rq:[["chair"],["bench"]],load:["db","kb"]},
+ rdl:{rq:[["db"],["kb"]],load:["db","kb"]}, slrdl:{load:["db","kb"]}, swing:{rq:[["db"],["kb"]],load:["kb","db"]}, slthrust:{rq:[["chair"],["bench"]],load:["db","kb"]},
  cossack:{load:["db","kb"]}, seitausfall:{load:["db"]}, stepup:{rq:[["chair"],["stairs"],["bench"]],load:["db"]}, bridge:{load:["db","kb","bb"]},
  nordic:{rq:[["chair"]]}, calf:{rq:[["stairs"]]}, monster:{rq:[["loop"]]},
  klimmzug:{rq:[["bar"]]}, chinup:{rq:[["bar"]]}, negativ:{rq:[["bar"]]}, skapula:{rq:[["bar"]]}, hang:{rq:[["bar"]]}, kneeraise:{rq:[["bar"]]},
- rudern1:{rq:[["db","chair"],["db","bench"]],load:["db"]}, rudern2:{rq:[["db"]],load:["db"]}, revfly:{rq:[["db"]],load:["db"]}, curl:{rq:[["db"]],load:["db"]},
- floorpress:{rq:[["db"]],load:["db"]}, ohp:{rq:[["db"]],load:["db"]}, arnold:{rq:[["db"]],load:["db"]}, pushpress:{rq:[["db"]],load:["db"]},
+ rudern1:{rq:[["db","chair"],["db","bench"],["kb","chair"],["kb","bench"]],load:["db","kb"]}, rudern2:{rq:[["db"]],load:["db"]}, revfly:{rq:[["db"]],load:["db"]}, curl:{rq:[["db"]],load:["db"]},
+ floorpress:{rq:[["db"],["kb"]],load:["db","kb"]}, ohp:{rq:[["db"],["kb"]],load:["db","kb"]}, arnold:{rq:[["db"]],load:["db"]}, pushpress:{rq:[["db"]],load:["db"]},
  dips:{rq:[["dips"]]}, renegade:{rq:[["db"]],load:["db"]}, tgu:{rq:[["db"],["kb"]],load:["kb","db"]}, suitcase:{rq:[["db"],["kb"]],load:["db","kb"]},
  farmer:{rq:[["db"],["kb"]],load:["db","kb"]}, copen:{rq:[["chair"],["bench"]]}, pallof:{rq:[["band"],["loop"]]}, facepull:{rq:[["band"],["loop"]]},
  seitheben:{rq:[["db"]],load:["db"]}, shrug:{rq:[["db"],["kb"]],load:["db","kb"]},
- tischrudern:{rq:[["table"]]}, stuhldips:{rq:[["chair"]]}, bankdruecken:{rq:[["db","bench"]],load:["db"]},
+ tischrudern:{rq:[["table"]]}, stuhldips:{rq:[["chair"]]}, bankdruecken:{rq:[["db","bench"],["bb","bench"]],load:["db","bb"]},
  bandrudern:{rq:[["band"]]}, banddruecken:{rq:[["band"]]}, bandlatzug:{rq:[["band"]]},
  lhrdl:{rq:[["bb"]],load:["bb"]}, lhrudern:{rq:[["bb"]],load:["bb"]}, lhpress:{rq:[["bb"]],load:["bb"]}, trxrow:{rq:[["trx"]]}, seilspringen:{rq:[["rope"]]},
 };
@@ -282,16 +282,36 @@ window.POOLS=Object.assign(window.POOLS,{
  legs:["calf","tibialis","pogo","monster","nordic","slidecurl"],
  mob:["hipflexor","deepsquat"],
  pullBW:["superman","ytw"],
+ feet:["calf","tibialis","pogo"],
  run:["int44","int33","dauerlauf"], rope:["seilspringen"], walk:["gehen"],
 });
 /* Station-Typ -> Ersatzpools, falls mit der Ausrüstung nichts im Pool geht */
-window.STATION_FALLBACK={push:["pushH","pushMix","pushV"],lower:["knee","single","hip","lowerMix"],pull:["pullH","pullMix","pullV","pullBW","neck"],core:["antiExt","antiRot","antiLat"],x5:["neck","legs","mob"],x6:["antiLat","antiRot","antiExt"]};
+/* Station-Typ -> Ersatzpools, falls mit der Ausrüstung nichts im Pool geht (Schlüssel ohne Ziffer) */
+window.STATION_FALLBACK={push:["pushH","pushMix","pushV"],lower:["knee","single","hip","lowerMix"],pull:["pullH","pullMix","pullV","pullBW","neck"],core:["antiExt","antiRot","antiLat"],x5:["neck","legs","mob"],x6:["antiLat","antiRot","antiExt"],x:["neck","legs","mob","antiLat"],x10:["feet","legs","neck"]};
+/* Ersatz je Pool: bleibt in derselben Kategorie (Rumpf bleibt Rumpf, Füße werden nicht zu schweren Beinübungen) */
+window.POOL_FB={pushH:["pushMix","pushV"],pushV:["pushMix","pushH"],pushMix:["pushH","pushV"],
+ pullH:["pullMix","pullV","pullBW","neck"],pullV:["pullMix","pullH","pullBW","neck"],pullMix:["pullH","pullV","pullBW","neck"],pullBW:["neck"],
+ knee:["single","lowerMix","hip"],hip:["lowerMix","single","knee"],single:["knee","lowerMix","hip"],lowerMix:["knee","hip","single"],
+ antiExt:["antiRot","antiLat"],antiRot:["antiExt","antiLat"],antiLat:["antiRot","antiExt"],
+ neck:["pullBW","mob"],legs:["feet","hip"],feet:["mob"],mob:["neck"]};
+/* Für Einsteiger nur selten vorgeschlagen (schwer oder technisch anspruchsvoll) */
+window.ADVANCED=["nordic","archer","tgu","copen","renegade","klimmzug","chinup","dips","pogo"];
+/* Einheiten. Reihenfolge der Stationen = Priorität: kurze Einheiten nehmen die ersten n.
+   reg: welche Muskelregion die Einheit hart belastet (für 48 h Erholung). */
 window.SESS_T=[
- {id:"S1",name:"Ganzkörper A",sub:"Knie · vertikal ziehen · horizontal drücken",st:[["push","pushH","Druck"],["lower","knee","Beine"],["pull","pullV","Zug"],["core","antiExt","Rumpf"],["x5","neck","Schulter"],["x6","antiLat","Rumpf 2"]]},
- {id:"S2",name:"Ganzkörper B",sub:"Hüfte · horizontal ziehen · über Kopf drücken",st:[["push","pushV","Druck"],["lower","hip","Beine"],["pull","pullH","Zug"],["core","antiRot","Rumpf"],["x5","legs","Beine 2"],["x6","antiExt","Rumpf 2"]]},
- {id:"S3",name:"Ganzkörper C",sub:"Einbeinig · Zug-Mix · Druck-Mix",st:[["push","pushMix","Druck"],["lower","single","Beine"],["pull","pullMix","Zug"],["core","antiLat","Rumpf"],["x5","neck","Schulter"],["x6","antiRot","Rumpf 2"]]},
- {id:"S4",name:"Ganzkörper D",sub:"Gemischt",st:[["push","pushH","Druck"],["lower","lowerMix","Beine"],["pull","pullMix","Zug"],["core","antiExt","Rumpf"],["x5","legs","Beine 2"],["x6","antiLat","Rumpf 2"]]},
+ {id:"S1",reg:"full",name:"Ganzkörper A",sub:"Knie · vertikal ziehen · horizontal drücken",st:[["push","pushH","Druck"],["lower","knee","Beine"],["pull","pullV","Zug"],["core","antiExt","Rumpf"],["x5","neck","Schulter"],["x6","antiLat","Rumpf 2"],["push2","pushV","Druck 2"],["lower2","hip","Beine 2"],["pull2","pullH","Zug 2"],["x10","feet","Waden & Füße"]]},
+ {id:"S2",reg:"full",name:"Ganzkörper B",sub:"Hüfte · horizontal ziehen · über Kopf drücken",st:[["push","pushV","Druck"],["lower","hip","Beine"],["pull","pullH","Zug"],["core","antiRot","Rumpf"],["x5","legs","Beine 2"],["x6","antiExt","Rumpf 2"],["push2","pushH","Druck 2"],["lower2","single","Beine 3"],["pull2","pullV","Zug 2"],["x10","neck","Schulter"]]},
+ {id:"S3",reg:"full",name:"Ganzkörper C",sub:"Einbeinig · Zug-Mix · Druck-Mix",st:[["push","pushMix","Druck"],["lower","single","Beine"],["pull","pullMix","Zug"],["core","antiLat","Rumpf"],["x5","neck","Schulter"],["x6","antiRot","Rumpf 2"],["push2","pushV","Druck 2"],["lower2","knee","Beine 2"],["pull2","pullH","Zug 2"],["x10","feet","Waden & Füße"]]},
 ];
+window.SPLIT_T={
+ U1:{reg:"upper",name:"Oberkörper A",sub:"Drücken und Ziehen, horizontal betont",st:[["push","pushH","Druck"],["pull","pullV","Zug"],["push2","pushV","Druck 2"],["pull2","pullH","Zug 2"],["core","antiRot","Rumpf"],["x6","neck","Schulter"],["x7","pushMix","Druck 3"],["x8","pullMix","Zug 3"],["x9","antiLat","Rumpf 2"],["x10","neck","Schulter 2"]]},
+ U2:{reg:"upper",name:"Oberkörper B",sub:"Drücken und Ziehen, über Kopf betont",st:[["push","pushV","Druck"],["pull","pullH","Zug"],["push2","pushMix","Druck 2"],["pull2","pullMix","Zug 2"],["core","antiLat","Rumpf"],["x6","neck","Schulter"],["x7","pushH","Druck 3"],["x8","pullV","Zug 3"],["x9","antiRot","Rumpf 2"],["x10","neck","Schulter 2"]]},
+ L1:{reg:"lower",name:"Unterkörper A",sub:"Knie betont, dazu Rumpf",st:[["lower","knee","Beine"],["lower2","hip","Hüfte"],["core","antiExt","Rumpf"],["x4","legs","Beine 2"],["x5","single","Einbeinig"],["x6","antiLat","Rumpf 2"],["x7","lowerMix","Beine 3"],["x8","mob","Mobilität"],["x9","antiRot","Rumpf 3"],["x10","feet","Füße"]]},
+ L2:{reg:"lower",name:"Unterkörper B",sub:"Hüfte betont, dazu Rumpf",st:[["lower","hip","Hüfte"],["lower2","single","Einbeinig"],["core","antiRot","Rumpf"],["x4","legs","Beine 2"],["x5","knee","Beine"],["x6","antiExt","Rumpf 2"],["x7","lowerMix","Beine 3"],["x8","mob","Mobilität"],["x9","antiLat","Rumpf 3"],["x10","feet","Füße"]]},
+ M:{reg:"light",name:"Rumpf & Mobilität",sub:"Leichter Tag: Rumpf, Nacken, Beweglichkeit",st:[["core","antiExt","Rumpf"],["x2","mob","Mobilität"],["x3","antiRot","Rumpf 2"],["x4","neck","Nacken"],["x5","antiLat","Rumpf 3"],["x6","feet","Füße"],["x7","mob","Mobilität 2"],["x8","neck","Schulter"],["x9","antiExt","Rumpf 4"],["x10","feet","Waden"]]},
+};
+/* Wochenaufbau je Häufigkeit. 1 bis 3: Ganzkörper. Ab 4: Ober/Unterkörper im Wechsel, damit jede Region 48 h Pause hat; bei 5 und 7 ein leichter Tag. */
+window.WEEK_T={1:["S1"],2:["S1","S2"],3:["S1","S2","S3"],4:["U1","L1","U2","L2"],5:["U1","L1","U2","L2","M"],6:["U1","L1","U2","L2","U1","L2"],7:["U1","L1","U2","L2","U1","L2","M"]};
 window.CARDIO={run:{pool:"run",label:"Lauf",fig:"int44"},rope:{pool:"rope",label:"Seilspringen",fig:"seilspringen"},walk:{pool:"walk",label:"Gehen",fig:"farmer",nodb:true}};
 window.WARMUP=[
  {n:"Hampelmann oder auf der Stelle marschieren",src:"hampelmann",t:30},
