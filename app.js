@@ -173,10 +173,34 @@ function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');c
 
 /* ---------------- Sheet ---------------- */
 function openSheet(html,onMount){const sh=$('#sheet');sh.innerHTML='<div class="grab"></div><button class="sheet-x" aria-label="Schließen">'+I.x+'</button>'+html;$('.sheet-x',sh).onclick=closeSheet;$('#sheetbg').classList.add('on');sh.classList.add('on');sh.scrollTop=0;if(onMount)onMount(sh);mountAll(sh);}
-function closeSheet(){const sh=$('#sheet');$$('[data-fig]',sh).forEach(el=>FIG.unmount(el));sh.classList.remove('on');$('#sheetbg').classList.remove('on');setTimeout(()=>{if(!sh.classList.contains('on'))sh.innerHTML='';},300);}
+function closeSheet(){vidStop();const sh=$('#sheet');$$('[data-fig]',sh).forEach(el=>FIG.unmount(el));sh.classList.remove('on');$('#sheetbg').classList.remove('on');setTimeout(()=>{if(!sh.classList.contains('on'))sh.innerHTML='';},300);}
 
-/* ---------------- Video ---------------- */
-function vidFrame(vid){return `<iframe src="https://www.youtube-nocookie.com/embed/${vid}?autoplay=1&mute=1&playsinline=1&loop=1&playlist=${vid}&controls=0&rel=0&modestbranding=1&iv_load_policy=3" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;}
+/* ---------------- Video ----------------
+   Eingebettet, nie heruntergeladen. Startpunkt pro Video lokal einstellbar ("Clip ab hier"). */
+let YTP=null;const YTQ=[];
+function ytApi(cb){if(window.YT&&YT.Player)return cb();YTQ.push(cb);if(YTP)return;YTP=1;const t=document.createElement('script');t.src='https://www.youtube.com/iframe_api';document.head.appendChild(t);
+  window.onYouTubeIframeAPIReady=()=>{while(YTQ.length)YTQ.shift()();};}
+function clipOf(vid){const c=(S.clip||{})[vid]||{};return {s:c.s||0,e:c.e||0};}
+let VP=null,VPT=null;
+function vidBox(vid){return `<div class="vwrap"><div class="vbox"><div id="ytp"></div></div><div class="vctl"><button data-clip="s">Clip ab hier</button><button data-clip="e">Ende hier</button><button data-clip="r">Zurücksetzen</button></div></div>`;}
+function vidMount(root,vid){
+  clearInterval(VPT);try{VP&&VP.destroy&&VP.destroy();}catch(e){}VP=null;
+  const host=$('#ytp',root);if(!host)return;
+  const show=()=>{const c=clipOf(vid);const ctl=$('.vctl',root);if(ctl)ctl.dataset.info=c.s||c.e?`Clip ${c.s}s${c.e?' bis '+c.e+'s':''}`:'';};
+  ytApi(()=>{if(!document.body.contains(host))return;const c=clipOf(vid);
+    VP=new YT.Player(host,{videoId:vid,width:'100%',height:'100%',playerVars:{autoplay:1,mute:1,playsinline:1,controls:0,rel:0,modestbranding:1,iv_load_policy:3,start:c.s,disablekb:1},
+      events:{onReady:e=>{e.target.mute();e.target.seekTo(clipOf(vid).s,true);e.target.playVideo();},
+              onStateChange:e=>{if(e.data===0){e.target.seekTo(clipOf(vid).s,true);e.target.playVideo();}}}});
+    VPT=setInterval(()=>{try{const c=clipOf(vid);if(VP&&VP.getCurrentTime&&c.e&&VP.getCurrentTime()>=c.e)VP.seekTo(c.s,true);}catch(e){}},250);
+  });
+  $$('[data-clip]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();S.clip=S.clip||{};const cur=S.clip[vid]||{};let t=0;try{t=Math.floor(VP.getCurrentTime());}catch(err){}
+    if(b.dataset.clip==='s'){cur.s=t;if(cur.e&&cur.e<=t)delete cur.e;toast('Clip startet jetzt bei '+t+' s');}
+    else if(b.dataset.clip==='e'){if(t>(cur.s||0)){cur.e=t;toast('Clip endet bei '+t+' s');VP.seekTo(cur.s||0,true);}}
+    else{delete S.clip[vid];toast('Clip zurückgesetzt');try{VP.seekTo(0,true);}catch(err){}}
+    if(b.dataset.clip!=='r')S.clip[vid]=cur;save();show();});
+  show();
+}
+function vidStop(){clearInterval(VPT);try{VP&&VP.destroy&&VP.destroy();}catch(e){}VP=null;}
 
 /* ---------------- Übungsdetail ---------------- */
 function doseChips(id){
@@ -219,8 +243,8 @@ function exDetail(id){
       $$('.mtoggle button',sh).forEach(b=>b.onclick=()=>{
         $$('.mtoggle button',sh).forEach(o=>o.classList.toggle('on',o===b));
         const m=$('#dmedia',sh);const f=m.querySelector('.fig');if(f)FIG.unmount(f);
-        if(b.dataset.m==='fig'){m.innerHTML=`<div class="fig" data-fig="${id}" data-aspect="1.25"></div>`;mountAll(m);}
-        else{const vid=b.dataset.m==='alt'?v.alt:v.v;m.innerHTML=`<div class="vbox" style="height:min(62vh,520px)">${vidFrame(vid)}</div>`;}
+        vidStop();if(b.dataset.m==='fig'){m.innerHTML=`<div class="fig" data-fig="${id}" data-aspect="1.25"></div>`;mountAll(m);}
+        else{const vid=b.dataset.m==='alt'?v.alt:v.v;m.innerHTML=vidBox(vid);vidMount(m,vid);}
       });
     });
   };
@@ -427,7 +451,7 @@ function stopTimer(){if(P.timer){clearInterval(P.timer);P.timer=null;}}
 function closePlayer(){stopTimer();P.on=false;$$('#player [data-fig]').forEach(el=>FIG.unmount(el));$('#player').classList.remove('on');$('#player').innerHTML='';document.body.style.overflow='';wake(false);renderAll();}
 function progBar(){if(P.run||!P.steps||!P.steps.length)return '<div class="pl-prog"></div>';const ex=P.steps.filter(s=>s.k==='ex'||s.k==='warm');const idx=P.steps.slice(0,P.i+1).filter(s=>s.k==='ex'||s.k==='warm').length;return `<div class="pl-prog">${ex.map((s,j)=>`<i class="${j<idx-1?'d':j===idx-1&&(P.steps[P.i].k==='ex'||P.steps[P.i].k==='warm')?'c':j<idx?'d':''}"></i>`).join('')}</div>`;}
 function shell(body,bottom){
-  $$('#player [data-fig]').forEach(el=>FIG.unmount(el));
+  vidStop();$$('#player [data-fig]').forEach(el=>FIG.unmount(el));
   $('#player').innerHTML=`<div class="pl-top">${progBar()}<button class="pl-x" id="plx" aria-label="Beenden">${I.x}</button></div><div class="pl-body">${body}</div>${bottom?`<div class="pl-bottom">${bottom}</div>`:''}`;
   mountAll($('#player'));
   $('#plx').onclick=quitAsk;
@@ -481,7 +505,7 @@ function stepEx(st){
   const id=st.id,x=EX[id];const v=window.VID&&VID[id];const pf=prefill(id,st.r);
   P.val=pf.val;P.kg=pf.kg;
   const le=lastEntry(id);const flag=S.flags[id];
-  const media=P.media==='v'&&v?`<div class="vbox">${vidFrame(v.v)}</div>`:`<div class="fig" data-fig="${id}" data-aspect="1.3"></div>`;
+  const media=P.media==='v'&&v?vidBox(v.v):`<div class="fig" data-fig="${id}" data-aspect="1.3"></div>`;
   const time=x.type==='time';
   shell(`<div class="pl-meta"><span class="st">Station ${st.st+1}/${st.n}</span><span>Runde ${st.r}/${st.R}</span></div>
     <div class="pl-media" id="plm">${media}${v?`<button class="pl-vbtn" id="vt">${P.media==='v'?I.fig+' Animation':I.video+' Video'}</button>`:''}</div>
@@ -493,10 +517,11 @@ function stepEx(st){
          :`<div class="logger"><div class="step"><button id="vm">−</button><div class="val"><b id="vv">${P.val}</b><span>Wdh${x.side?' / Seite':''}</span></div><button id="vp">+</button></div>${x.kg!==null&&x.kg!==undefined?`<button class="kgbtn" id="kg"><b id="kgv">${P.kg?P.kg:'0'}</b><span>${x.n2?'kg je':'kg'}</span></button>`:''}</div>`)+
     `${le?`<div class="last">Letztes Mal: <b>${esc(le.v)}</b> (${fmtD(le.d)})</div>`:''}
      <button class="bigbtn" id="done">${time?I.play+' Start':I.check+' Satz fertig'}</button>`);
+  if(P.media==='v'&&v)vidMount($('#plm'),v.v);
   // Werkzeuge
   bindRate($('#player'),()=>{$$('#player .pl-tools .th').forEach(b=>{const r=rateOf(id);b.classList.toggle('on',(+b.dataset.rate)===r);});});
   const vt=$('#vt');if(vt)vt.onclick=()=>{P.media=P.media==='v'?'fig':'v';const m=$('#plm');const f=m.querySelector('.fig');if(f)FIG.unmount(f);
-    m.innerHTML=(P.media==='v'?`<div class="vbox">${vidFrame(v.v)}</div>`:`<div class="fig" data-fig="${id}" data-aspect="1.3"></div>`)+`<button class="pl-vbtn" id="vt">${P.media==='v'?I.fig+' Animation':I.video+' Video'}</button>`;mountAll(m);$('#vt').onclick=vt.onclick;};
+    vidStop();m.innerHTML=(P.media==='v'?vidBox(v.v):`<div class="fig" data-fig="${id}" data-aspect="1.3"></div>`)+`<button class="pl-vbtn" id="vt">${P.media==='v'?I.fig+' Animation':I.video+' Video'}</button>`;mountAll(m);if(P.media==='v')vidMount(m,v.v);$('#vt').onclick=vt.onclick;};
   $('#inf').onclick=()=>exDetail(id);
   $('#swp').onclick=()=>swapSheet(st.slot,()=>{const nid=S.plan.sel[st.slot];P.steps.forEach(s=>{if(s.k==='ex'&&s.slot===st.slot)s.id=nid;});P.exIds=P.exIds.map(e=>e===id?nid:e);renderStep();});
   if(!time){

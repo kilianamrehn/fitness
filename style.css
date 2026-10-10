@@ -266,3 +266,12 @@ h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
 @keyframes pop{0%{transform:scale(.3);opacity:0}45%{transform:scale(1.08);opacity:1}75%{transform:scale(1)}100%{transform:scale(1);opacity:0}}
 @keyframes draw{to{stroke-dashoffset:0}}
 .vbox iframe{width:100%;height:100%;border:0;display:block;}
+.vwrap{position:relative;}
+.media .vbox{height:min(58vh,500px);}
+.vctl{display:flex;gap:6px;padding:8px;background:var(--paper);flex-wrap:wrap;align-items:center;}
+.vctl button{font-size:12px;font-weight:600;padding:7px 10px;border-radius:9px;background:var(--bg);border:1px solid var(--line);color:var(--ink2);}
+.vctl:after{content:attr(data-info);font-size:11.5px;color:var(--ink3);margin-left:auto;}
+.pl-media .vwrap .vbox{height:min(46vh,420px);}
+.pl-media .vctl{background:var(--bg);}
+.pl-media .vctl button{background:var(--paper);}
+.pl-media:has(.vwrap) .pl-vbtn{bottom:56px;}
