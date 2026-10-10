@@ -586,13 +586,32 @@ function stepWarm(st){
   $('#nx').onclick=next;
   $('#skipw').onclick=()=>{stopTimer();while(P.steps[P.i+1]&&P.steps[P.i+1].k==='warm')P.i++;next();};
 }
-function prefill(id,r){
-  const b=P.buf[id];if(b&&b.sets.length)return {val:b.sets[b.sets.length-1],kg:b.kg};
-  const le=lastEntry(id);const x=EX[id];
-  const src=loadSrc(id);
-  if(le&&le.sets&&le.sets.length)return {val:le.sets[Math.min(r-1,le.sets.length-1)],kg:src?fitKg(le.kg!=null?le.kg:x.kg,id):null};
-  return {val:x.def,kg:src?fitKg(x.kg,id):null};
+/* Sätze eines Log-Eintrags als [{r,kg}] */
+function setsOf(e){if(!e||!e.sets)return [];return e.sets.map((r,i)=>({r,kg:e.kgs?e.kgs[i]:(e.kg!=null?e.kg:null)}));}
+function repRange(id){const m=String(EX[id].tgt||'').match(/^(\d+)\s*[–-]\s*(\d+)$/);return m?[+m[1],+m[2]]:null;}
+/* Steigern: letztes Mal alle Sätze am oberen Ende mit demselben Gewicht -> nächstes Gewicht */
+function progressOf(id){
+  if(!loadSrc(id)||EX[id].type==='time')return null;const rr=repRange(id);const le=lastEntry(id);const ss=setsOf(le);
+  if(!rr||ss.length<2)return null;const kg=ss[0].kg||0;
+  if(!ss.every(x=>x.r>=rr[1]&&(x.kg||0)===kg))return null;
+  const nx=weights(id).find(w=>w>kg);
+  return nx!=null?{kg:nx,reps:rr[0],from:kg,top:rr[1]}:{kg:null,top:rr[1],from:kg};
 }
+function prefill(id,r){
+  const x=EX[id],src=loadSrc(id),b=P.buf[id],le=lastEntry(id),ls=setsOf(le)[r-1],pr=progressOf(id);
+  let val,kg=null;
+  if(pr&&pr.kg!=null)val=pr.reps;else if(ls)val=ls.r;else if(b&&b.sets.length)val=b.sets[b.sets.length-1];else val=x.def;
+  if(src){if(b&&b.kgs&&b.kgs.length)kg=b.kgs[b.kgs.length-1];else if(pr&&pr.kg!=null)kg=pr.kg;else if(ls&&ls.kg!=null)kg=fitKg(ls.kg,id);else kg=fitKg(x.kg,id);}
+  return {val,kg};
+}
+function setGrid(id,st){
+  const R=st.R,b=P.buf[id],le=lastEntry(id),ls=setsOf(le),pr=progressOf(id);
+  const today=[];for(let i=0;i<R;i++){const d=b&&b.sets[i]!=null;today.push(d?`<td class="d">${cellTxt(id,b.sets[i],b.kgs?b.kgs[i]:b.kg)}</td>`:(i===(b?b.sets.length:0)?'<td class="now">jetzt</td>':'<td>·</td>'));}
+  const last=[];for(let i=0;i<R;i++)last.push(ls[i]?`<td>${cellTxt(id,ls[i].r,ls[i].kg)}</td>`:'<td>·</td>');
+  return `<table class="sgrid"><tr><th></th>${Array.from({length:R},(_,i)=>`<th>Satz ${i+1}</th>`).join('')}</tr>
+    <tr><th>Heute</th>${today.join('')}</tr>${ls.length?`<tr class="lt"><th>${fmtD(le.d).slice(0,5)}</th>${last.join('')}</tr>`:''}</table>`;
+}
+function cellTxt(id,r,kg){const t=EX[id].type==='time';return t?r+' s':(kg?`${kg}<i>×</i>${r}`:String(r));}
 function stepEx(st){
   const id=st.id,x=EX[id];const v=window.VID&&VID[id];const pf=prefill(id,st.r);
   P.val=pf.val;P.kg=pf.kg;
@@ -602,12 +621,13 @@ function stepEx(st){
   shell(`<div class="pl-meta"><span class="st">Station ${st.st+1}/${st.n}</span><span>Runde ${st.r}/${st.R}</span></div>
     <div class="pl-media" id="plm">${media}${v?`<button class="pl-vbtn" id="vt">${P.media==='v'?I.fig+' Animation':I.video+' Video'}</button>`:''}</div>
     <div class="pl-name">${esc(x.n)}</div>
-    <div class="pl-sub">${doseChips(id).map(c=>`<span>${esc(c)}</span>`).join('')}${flag&&flag.hard?`<span class="g">Schwerer: ${esc(x.p)}</span>`:''}</div>
+    <div class="pl-sub">${doseChips(id).map(c=>`<span>${esc(c)}</span>`).join('')}${flag&&flag.hard?`<span class="g">Schwerer: ${esc(x.p)}</span>`:''}${(()=>{const pr=progressOf(id);if(!pr||(P.buf[id]&&P.buf[id].sets.length))return '';return pr.kg!=null?`<span class="up">${I.star} Steigern: ${pr.kg} kg</span>`:`<span class="up">${I.star} Steigern: ${esc(x.p)}</span>`;})()}</div>
     <div class="pl-cues">${x.c.slice(0,2).map(c=>`<div>· ${esc(c)}</div>`).join('')}</div>
     <div class="pl-tools"><button class="th up ${rateOf(id)===1?'on':''}" data-rate="1" data-id="${id}">${I.up}</button><button class="th down ${rateOf(id)===-1?'on':''}" data-rate="-1" data-id="${id}">${I.down}</button><button id="swp">${I.swap} Tauschen</button><button id="skp">${I.skip} Überspringen</button><button id="inf">${I.info}</button></div>`,
    (time?`<div class="timer"><button class="iconbtn" id="tm">−</button><div class="tring" id="tr">${ringT(1)}<b id="tv">${mmss(P.val)}</b></div><button class="iconbtn" id="tp">+</button>${x.side?'<div class="tside" id="tsd">Seite 1</div>':''}</div>`
-         :`<div class="logger"><div class="step"><button id="vm">−</button><div class="val"><b id="vv">${P.val}</b><span>Wdh${x.side?' / Seite':''}</span></div><button id="vp">+</button></div>${P.kg!==null&&P.kg!==undefined&&loadSrc(id)?`<button class="kgbtn" id="kg"><b id="kgv">${P.kg?P.kg:'0'}</b><span>${x.n2&&loadSrc(id)!=='bb'?'kg je':'kg'}</span></button>`:''}</div>`)+
-    `${le?`<div class="last">Letztes Mal: <b>${esc(le.v)}</b> (${fmtD(le.d)})</div>`:''}
+         :`${loadSrc(id)?`<div class="kgrow" id="kgrow"><span class="kgl">${loadSrc(id)==='bb'?'kg gesamt':x.n2?'kg je Hantel':'kg'}</span><div class="kgch">${weights(id).map(w=>`<button data-kgw="${w}" class="${w===P.kg?'on':''}">${w===0?'ohne':w}</button>`).join('')}</div></div>`:''}
+           <div class="logger"><div class="step"><button id="vm">−</button><div class="val"><b id="vv">${P.val}</b><span>Wdh${x.side?' / Seite':''}</span></div><button id="vp">+</button></div></div>`)+
+    `${setGrid(id,st)}
      <button class="bigbtn" id="done">${time?I.play+' Start':I.check+' Satz fertig'}</button>`);
   if(P.media==='v'&&v)vidMount($('#plm'),v.v);
   // Werkzeuge
@@ -621,7 +641,8 @@ function stepEx(st){
     const upd=()=>{$('#vv').textContent=P.val;};
     $('#vm').onclick=()=>{P.val=Math.max(0,P.val-1);upd();};
     $('#vp').onclick=()=>{P.val=P.val+1;upd();};
-    const kg=$('#kg');if(kg)kg.onclick=()=>kgSheet(k=>{P.kg=k;$('#kgv').textContent=k;},id);
+    $$('[data-kgw]').forEach(bt=>bt.onclick=()=>{P.kg=+bt.dataset.kgw;$$('[data-kgw]').forEach(o=>o.classList.toggle('on',o===bt));});
+    const on=$('.kgch .on');if(on)on.scrollIntoView({inline:'center',block:'nearest'});
     $('#done').onclick=()=>{logSet(id,P.val,P.kg);next();};
   }else{
     const total=()=>x.side?P.val*2:P.val;
@@ -650,7 +671,7 @@ function kgSheet(cb,id){
   openSheet(`<h3>Gewicht</h3><div class="small" style="margin:4px 0 14px">Pro Hantel. Bei Klimmzug und Dips ist es Zusatzlast. Deine Gewichte stellst du in den Einstellungen ein.</div><div class="reasons">${opts.map(o=>`<button data-kgo="${o}" class="${P.kg===o?'on':''}" style="font-size:16px;padding:10px 14px">${o}</button>`).join('')}</div>`,
   sh=>$$('[data-kgo]',sh).forEach(b=>b.onclick=()=>{cb(+b.dataset.kgo);closeSheet();}));
 }
-function logSet(id,val,kg){const b=P.buf[id]||(P.buf[id]={sets:[],kg});b.sets.push(val);b.kg=kg;}
+function logSet(id,val,kg){const b=P.buf[id]||(P.buf[id]={sets:[],kgs:[],kg});if(!b.kgs)b.kgs=[];b.sets.push(val);b.kgs.push(kg);b.kg=Math.max(...b.kgs.map(k=>k||0))||kg;}
 function stepRest(st){
   const nx=nextExStep();const x=nx&&EX[nx.id];
   shell(`<div class="rest"><div class="lbl">${st.round?'Rundenpause':'Wechsel'}</div><div class="big" id="rv">${st.t}</div>
@@ -669,7 +690,9 @@ function stepBonus(st){
   $('#sk').onclick=next;
   $('#go').onclick=()=>{P.bonusDone=true;const ins=[{k:'ex',id:st.id,slot:null,st:0,r:1,R:2,n:1,bonus:true},{k:'rest',t:30},{k:'ex',id:st.id,slot:null,st:0,r:2,R:2,n:1,bonus:true}];P.steps.splice(P.i+1,0,...ins);if(!P.exIds.includes(st.id))P.exIds.push(st.id);next();};
 }
-function fmtSets(id,b){const x=EX[id];const u=x.type==='time'?' s':'';return b.sets.join(' · ')+u+(b.kg?` · ${b.kg} kg`:'');}
+function fmtSets(id,b){const x=EX[id];const u=x.type==='time'?' s':'';const k=(b.kgs||[]).filter(v=>v!=null);
+  if(k.length&&new Set(k).size>1)return b.sets.map((r,i)=>`${b.kgs[i]||0}×${r}`).join(' · ')+' (kg×Wdh)';
+  return b.sets.join(' · ')+u+(b.kg?` · ${b.kg} kg`:'');}
 function stepEnd(){
   stopTimer();
   const mins=Math.max(1,Math.round((Date.now()-P.t0)/60000));
@@ -694,7 +717,7 @@ function stepEnd(){
   $('#fin').onclick=()=>finish(mins);
 }
 function finish(mins){
-  for(const id in P.buf){const b=P.buf[id];const arr=LOG[id]||(LOG[id]=[]);const ent={d:TODAY,v:fmtSets(id,b),sets:b.sets,kg:b.kg||null};
+  for(const id in P.buf){const b=P.buf[id];const arr=LOG[id]||(LOG[id]=[]);const ent={d:TODAY,v:fmtSets(id,b),sets:b.sets,kg:b.kg||null};if(b.kgs&&b.kgs.some(k=>k!=null))ent.kgs=b.kgs;
     const i=arr.findIndex(e=>e.d===TODAY);if(i>=0)arr[i]=ent;else arr.push(ent);LOG[id]=arr.slice(-60);}
   const exSteps=P.steps.filter(s=>s.k==='ex'&&!s.bonus).length;const doneSets=Object.entries(P.buf).filter(([id])=>!P.steps.find(s=>s.k==='ex'&&s.id===id&&s.bonus)).reduce((a,[,b])=>a+b.sets.length,0);
   if(doneSets>=Math.ceil(exSteps/2)||P.short){markDone(P.sid);}
