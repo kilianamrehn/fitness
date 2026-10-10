@@ -183,7 +183,25 @@
       case 'post': return `<rect x="${f(pr.x-3)}" y="${f(pr.y1)}" width="6" height="${f(pr.y2-pr.y1)}" rx="2" fill="${C.line}"/>`;
       case 'band': {const a=pt(P,pr.from),b=pt(P,pr.to);return `<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}" stroke="${C.band}" stroke-width="3" stroke-linecap="round" opacity=".85"/>`;}
       case 'loop': {const a=pt(P,pr.a),b=pt(P,pr.b);return `<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}" stroke="${C.band}" stroke-width="4" stroke-linecap="round" opacity=".85"/>`;}
-      case 'db': return dumbbell(pt(P,pr.j),pr.o||'end',pr.s);
+      case 'db': {let o=pr.o||'end';
+        if(typeof o==='string'&&/^(farm|uarm)[12]$/.test(o)){const s=o.slice(-1),seg=o.slice(0,4),a=seg==='farm'?P['el'+s]:P['sh'+s],b=seg==='farm'?P['ha'+s]:P['el'+s];o=Math.atan2(b[1]-a[1],b[0]-a[0])/RAD+90+(pr.rot||0);}
+        return dumbbell(pt(P,pr.j),o,pr.s);}
+      case 'bb': { // Langhantel: Seite = Scheibe am Griff, Front = Stange zwischen den Händen
+        const a=pt(P,pr.j||'ha1');
+        if(front&&P.ha2&&pr.o!=='end'){const b=P.ha2,dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,u=[dx/l,dy/l],n=[-u[1],u[0]],e1=add(a,u,-34),e2=add(b,u,34);
+          const pl=(c)=>{const p1=add(add(c,u,-3),n,-14),p2=add(add(c,u,3),n,-14),p3=add(add(c,u,3),n,14),p4=add(add(c,u,-3),n,14);return `<path d="M${p1.map(f).join(' ')}L${p2.map(f).join(' ')}L${p3.map(f).join(' ')}L${p4.map(f).join(' ')}Z" fill="${C.eq}" stroke="${C.eq}" stroke-width="3" stroke-linejoin="round"/>`;};
+          return `<line x1="${f(e1[0])}" y1="${f(e1[1])}" x2="${f(e2[0])}" y2="${f(e2[1])}" stroke="${C.eq2}" stroke-width="3.5" stroke-linecap="round"/>`+pl(add(a,u,-24))+pl(add(b,u,24));}
+        return `<circle cx="${f(a[0])}" cy="${f(a[1])}" r="${f(15*(pr.s||1))}" fill="${C.eq}"/><circle cx="${f(a[0])}" cy="${f(a[1])}" r="${f(10*(pr.s||1))}" fill="none" stroke="${C.eq2}" stroke-width="1.5"/><circle cx="${f(a[0])}" cy="${f(a[1])}" r="2.6" fill="${C.eq2}"/>`;}
+      case 'kb': { // Kettlebell hängt am Griff in Unterarmrichtung
+        const a=pt(P,pr.j||'ha1');const s=pr.j&&pr.j.slice(-1);let d=[0,1];
+        if(s&&P['el'+s]){const e=P['el'+s];const dx=a[0]-e[0],dy=a[1]-e[1],l=Math.hypot(dx,dy)||1;d=[dx/l,dy/l];}
+        if(pr.down!==undefined)d=dir(pr.down);
+        const c=add(a,d,10*(pr.s||1));const r=8.5*(pr.s||1);
+        return `<circle cx="${f(c[0])}" cy="${f(c[1])}" r="${f(r)}" fill="${C.eq}"/><circle cx="${f(a[0])}" cy="${f(a[1])}" r="${f(4.2*(pr.s||1))}" fill="none" stroke="${C.eq}" stroke-width="2.6"/>`;}
+      case 'table': return `<rect x="${f(pr.x)}" y="${f(pr.y)}" width="${f(pr.w)}" height="6" rx="2" fill="${C.eq2}"/><line x1="${f(pr.x+5)}" y1="${f(pr.y+6)}" x2="${f(pr.x+5)}" y2="${f(pr.y+pr.h)}" stroke="${C.line}" stroke-width="4"/><line x1="${f(pr.x+pr.w-5)}" y1="${f(pr.y+6)}" x2="${f(pr.x+pr.w-5)}" y2="${f(pr.y+pr.h)}" stroke="${C.line}" stroke-width="4"/>`;
+      case 'door': return `<rect x="${f(pr.x-3)}" y="${f(pr.y1)}" width="6" height="${f(pr.y2-pr.y1)}" fill="#e6dfd2"/>`+(pr.knob!==undefined?`<circle cx="${f(pr.x+(pr.side||-1)*6)}" cy="${f(pr.knob)}" r="3" fill="${C.eq2}"/>`:'');
+      case 'towel': {const a=pt(P,pr.from),b=pt(P,pr.to);return `<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}" stroke="#cfc4b3" stroke-width="5" stroke-linecap="round"/>`;}
+      case 'rope': {const a=pt(P,'ha1'),b=pt(P,'ha2');const y=pr.y;const mid=[(a[0]+b[0])/2,pr.up?Math.min(a[1],b[1])-60:y];return `<path d="M${f(a[0])} ${f(a[1])}Q${f(mid[0])} ${f(mid[1]+(pr.up?-20:12))} ${f(b[0])} ${f(b[1])}" fill="none" stroke="${C.band}" stroke-width="2.2"/>`;}
       case 'step': return `<rect x="${f(pr.x)}" y="${f(pr.y)}" width="${f(pr.w)}" height="${f(pr.h)}" rx="2" fill="#e6dfd2" stroke="${C.line}" stroke-width="2"/>`;
       case 'arrow': {const a=pr.from,b=pr.to;return `<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}" stroke="${C.hl}" stroke-width="2" stroke-dasharray="3 4" stroke-linecap="round" opacity=".6"/>`;}
     }
@@ -194,9 +212,10 @@
     const front=(ex.view||'side')==='front';
     const hl=ex.hl||[];
     const props=ex.props||[];
-    const back=props.filter(p=>!p.layer&&p.t!=='db'&&p.t!=='band'&&p.t!=='loop'||p.layer==='back');
-    const by=j=>props.filter(p=>p.t==='db'&&(p.j||'').endsWith(j)&&p.layer!=='back'&&p.layer!=='front');
-    const fronts=props.filter(p=>p.layer==='front'||((p.t==='band'||p.t==='loop')&&!p.layer));
+    const HELD=['db','kb','bb'];
+    const back=props.filter(p=>!p.layer&&!HELD.includes(p.t)&&!['band','loop','towel','rope'].includes(p.t)||p.layer==='back');
+    const by=j=>props.filter(p=>HELD.includes(p.t)&&(p.j||'ha1').endsWith(j)&&p.layer!=='back'&&p.layer!=='front');
+    const fronts=props.filter(p=>p.layer==='front'||(['band','loop','towel','rope'].includes(p.t)&&!p.layer));
     let o='';
     // Schatten
     if(ex.floor!==undefined){const xs=[P.an1[0],P.an2[0],P.pelvis[0]];const cx=(Math.min(...xs)+Math.max(...xs))/2;const w=Math.max(28,(Math.max(...xs)-Math.min(...xs))/2+18);o+=`<ellipse cx="${cx.toFixed(1)}" cy="${(ex.floor+1).toFixed(1)}" rx="${w.toFixed(1)}" ry="4" fill="${C.shadow}"/>`;}
@@ -206,10 +225,8 @@
       for(const p of by('2'))o+=prop(p,P,front);
       o+=limb(P,2,hl,C.far);
       o+=torso(P,hl,false);
-      o+=limb(P,1,hl,C.ink);
-      o+=head(P,P._a,false);
-      o+=arm(P,1,hl,C.ink);
-      for(const p of by('1'))o+=prop(p,P,front);
+      if(ex.armBehind){o+=arm(P,1,hl,C.ink);for(const p of by('1'))o+=prop(p,P,front);o+=limb(P,1,hl,C.ink);o+=head(P,P._a,false);}
+      else{o+=limb(P,1,hl,C.ink);o+=head(P,P._a,false);o+=arm(P,1,hl,C.ink);for(const p of by('1'))o+=prop(p,P,front);}
     }else{
       o+=limb(P,1,hl,C.ink)+limb(P,2,hl,C.ink);
       o+=torso(P,hl,true);
@@ -228,9 +245,10 @@
     for(let i=0;i<=40;i++){const P=framePose(ex,total*i/40);for(const k in P){if(k[0]==='_')continue;const p=P[k];x0=Math.min(x0,p[0]-12);y0=Math.min(y0,p[1]-12);x1=Math.max(x1,p[0]+12);y1=Math.max(y1,p[1]+12);}}
     for(const p of ex.props||[]){
       if(p.t==='bar'){x0=Math.min(x0,p.x1-8);x1=Math.max(x1,p.x2+8);y0=Math.min(y0,p.y-(p.frame?20:8));}
-      if(p.t==='bench'||p.t==='box'||p.t==='step'){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x+p.w);y0=Math.min(y0,p.y);}
+      if(p.t==='bench'||p.t==='box'||p.t==='step'||p.t==='table'){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x+p.w);y0=Math.min(y0,p.y);}
       if(p.t==='dips'){x0=Math.min(x0,p.x-(p.w||26)-8);x1=Math.max(x1,p.x+(p.w||26)+8);}
       if(p.t==='wall'){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x+8);}
+      if(p.t==='door'){x0=Math.min(x0,p.x-6);x1=Math.max(x1,p.x+6);}
       if(p.t==='post'){x0=Math.min(x0,p.x-4);x1=Math.max(x1,p.x+4);y0=Math.min(y0,p.y1);}
     }
     if(ex.floor!==undefined)y1=Math.max(y1,ex.floor+8);

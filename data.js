@@ -196,3 +196,106 @@ window.SESS=[
 ];
 window.BONUS_THEMES=[["neck","Nacken & Schulter"],["legs","Beine & Füße"],["mob","Mobilität"]];
 window.CATS=[["beine","Beine & Hüfte"],["zug","Zug"],["druck","Druck"],["rumpf","Rumpf & Tragen"],["prehab","Nacken, Schulter, Füße"],["mobil","Mobilität"],["lauf","Lauf"]];
+
+/* ---------- v5.2: neue Übungen für andere Ausrüstung ---------- */
+Object.assign(window.EX,{
+ kniebeuge:{n:"Kniebeuge",cat:"beine",pat:"Knie",m:"Quadrizeps, Gesäß",type:"reps",tgt:"15–25",def:15,kg:null,g:"B",
+  c:["Füße schulterbreit, Arme gehen nach vorn","Tief und aufrecht, Fersen am Boden","Langsam runter, zügig hoch"],e:"Knie fallen nach innen.",p:"3 s runter, 2 s Pause unten, Rucksack mit Gewicht",r:"Bis auf einen Stuhl setzen"},
+ tischrudern:{n:"Rudern unter dem Tisch",cat:"zug",pat:"Horizontal ziehen",m:"Rücken, Bizeps",type:"reps",tgt:"6–12",def:8,kg:null,g:"C",
+  c:["Nur ein schwerer, stabiler Tisch","Unter den Tisch legen, Tischkante greifen","Körper gerade, Brust zur Kante ziehen"],e:"Hüfte hängt durch.",p:"Beine strecken, langsam ablassen",r:"Knie gebeugt, Füße näher"},
+ tuerrudern:{n:"Handtuch-Rudern an der Tür",cat:"zug",pat:"Horizontal ziehen",m:"Rücken, Bizeps",type:"reps",tgt:"10–15",def:12,kg:null,g:"C",
+  c:["Handtuch um beide Türklinken einer offenen Tür","Füße nah an der Tür, gerade zurücklehnen","Brust zur Tür ziehen"],e:"Tür nicht gesichert.",p:"Füße näher an die Tür",r:"Aufrechter stehen"},
+ superman:{n:"Rückenstrecken in Bauchlage",cat:"zug",pat:"Rücken",m:"Rückenstrecker, Gesäß",type:"reps",tgt:"8–12",def:10,kg:null,g:"C",
+  c:["Bauchlage, Blick zum Boden","Brust und Beine leicht abheben, 2 s halten","Nur so hoch, wie es angenehm ist"],e:"Kopf in den Nacken.",p:"Länger halten",r:"Nur Arme oder nur Beine"},
+ stuhldips:{n:"Dips am Stuhl",cat:"druck",pat:"Vertikal drücken (unten)",m:"Trizeps, Brust",type:"reps",tgt:"8–15",def:10,kg:null,g:"C",
+  c:["Hände auf der Stuhlkante hinter dir","Knie gebeugt, Füße am Boden","Ellbogen zeigen nach hinten, nur bis Oberarm waagerecht"],e:"Zu tief, Schultern rollen nach vorn.",p:"Beine strecken",r:"Weniger tief"},
+ bankdruecken:{n:"Kurzhantel-Bankdrücken",cat:"druck",pat:"Horizontal drücken",m:"Brust, Trizeps",type:"reps",tgt:"8–12",def:10,kg:15,n2:true,g:"B",
+  c:["Füße fest am Boden, Schulterblätter zusammen","Hanteln neben der Brust, Unterarme senkrecht","Gerade hochdrücken"],e:"Hohlkreuz, Ellbogen ganz abgespreizt.",p:"Langsamer runter",r:"Leichter"},
+ bandrudern:{n:"Rudern mit Band",cat:"zug",pat:"Horizontal ziehen",m:"Rücken, hintere Schulter",type:"reps",tgt:"12–15",def:12,kg:null,g:"B",
+  c:["Band mit Türanker auf Brusthöhe","Griffe zu den Rippen ziehen","Schulterblätter zusammen, 1 s halten"],e:"Schultern hochziehen.",p:"Weiter weg stellen, stärkeres Band",r:"Näher ran"},
+ banddruecken:{n:"Brustpresse mit Band",cat:"druck",pat:"Horizontal drücken",m:"Brust, Trizeps",type:"reps",tgt:"12–15",def:12,kg:null,g:"B",
+  c:["Türanker hinter dir auf Brusthöhe","Griffe nach vorn drücken","Kontrolliert zurück"],e:"Ins Hohlkreuz fallen.",p:"Stärkeres Band",r:"Leichteres Band"},
+ bandlatzug:{n:"Latzug mit Band",cat:"zug",pat:"Vertikal ziehen",m:"Latissimus",type:"reps",tgt:"12–15",def:12,kg:null,g:"B",
+  c:["Band oben an der Tür befestigt, kniend","Griffe zu den Schultern ziehen","Ellbogen nach unten, Brust raus"],e:"Mit dem Oberkörper mitziehen.",p:"Stärkeres Band",r:"Leichteres Band"},
+ lhrdl:{n:"Rumänisches Kreuzheben, Langhantel",cat:"beine",pat:"Hüfte",m:"Hintere Oberschenkel, Gesäß",type:"reps",tgt:"8–10",def:8,kg:40,g:"B",
+  c:["Stange eng an den Beinen","Hüfte nach hinten, Knie leicht gebeugt","Rücken neutral"],e:"Stange weg vom Körper.",p:"Mehr Gewicht",r:"Weniger Tiefe"},
+ lhrudern:{n:"Langhantel-Rudern",cat:"zug",pat:"Horizontal ziehen",m:"Rücken",type:"reps",tgt:"8–12",def:10,kg:30,g:"B",
+  c:["Oberkörper etwa 45° vorgebeugt","Stange zur unteren Rippe ziehen","Rücken bleibt neutral"],e:"Schwung aus dem Rücken.",p:"Pause oben",r:"Weniger Gewicht"},
+ lhpress:{n:"Langhantel-Schulterdrücken",cat:"druck",pat:"Vertikal drücken",m:"Schulter, Trizeps",type:"reps",tgt:"6–10",def:8,kg:30,g:"B",
+  c:["Stange vor den Schultern","Gesäß fest, Kopf kurz nach hinten","Über den Kopf drücken"],e:"Ins Hohlkreuz.",p:"Mehr Gewicht",r:"Leichter"},
+ trxrow:{n:"Schlingentrainer-Rudern",cat:"zug",pat:"Horizontal ziehen",m:"Rücken, Bizeps",type:"reps",tgt:"10–15",def:12,kg:null,g:"B",
+  c:["Zurücklehnen, Körper gerade","Brust zu den Griffen ziehen","Langsam zurück"],e:"Hüfte knickt ein.",p:"Füße weiter nach vorn",r:"Aufrechter stehen"},
+ bergsteiger:{n:"Bergsteiger",cat:"rumpf",pat:"Anti-Extension",m:"Rumpf, Hüftbeuger",type:"time",tgt:"30 s",def:30,kg:null,g:"C",
+  c:["Hoher Stütz, Hände unter den Schultern","Knie abwechselnd zur Brust","Hüfte bleibt tief und ruhig"],e:"Hüfte wippt hoch.",p:"Schneller",r:"Langsam, kontrolliert"},
+ hampelmann:{n:"Hampelmann",cat:"mobil",pat:"Aufwärmen",m:"Ganzkörper",type:"time",tgt:"30 s",def:30,kg:null,g:"C",
+  c:["Locker auf den Fußballen","Arme und Beine gleichzeitig","Puls langsam hoch"],e:"Harte Landung.",p:"Schneller",r:"Seitlich steppen statt springen"},
+ seilspringen:{n:"Seilspringen",cat:"lauf",pat:"Ausdauer",m:"Herz-Kreislauf, Waden",type:"run",tgt:"15 Min",g:"B",
+  c:["Kleine Sprünge auf den Fußballen","Seil aus den Handgelenken drehen","40 s springen, 20 s Pause"],e:"Zu hoch springen.",p:"Längere Phasen",r:"Mehr Pause",
+  phases:[["Locker einspringen",120,"easy"],...Array.from({length:10},(_,i)=>[["Springen "+(i+1)+"/10",40,"hard"],["Pause",20,"easy"]]).flat(),["Ausklang",120,"easy"]]},
+ gehen:{n:"Zügig gehen",cat:"lauf",pat:"Ausdauer",m:"Herz-Kreislauf",type:"run",tgt:"30 Min",g:"B",
+  c:["So zügig, dass Reden gerade noch geht","Draußen oder Treppen","Gut für den Rücken"],e:"Zu gemütlich.",p:"Bergauf, Intervalle",r:"20 Min",
+  phases:[["Zügig gehen",1800,"easy"]]},
+});
+
+/* Ausrüstung: Anforderungen pro Übung. rq = Liste von Alternativen, jede Alternative = alle Geräte nötig.
+   load = Gewichtsquelle (optional, wenn nicht in rq). Haushalt: Tür, Wand, Boden, Handtuch gibt es immer. */
+window.REQ={
+ bulgarian:{rq:[["chair"],["bench"]],load:["db","kb"]}, goblet:{rq:[["db"],["kb"]],load:["db","kb"]}, rueckausfall:{load:["db","kb"]},
+ rdl:{rq:[["db"]],load:["db"]}, slrdl:{load:["db","kb"]}, swing:{rq:[["db"],["kb"]],load:["kb","db"]}, slthrust:{rq:[["chair"],["bench"]],load:["db","kb"]},
+ cossack:{load:["db","kb"]}, seitausfall:{load:["db"]}, stepup:{rq:[["chair"],["stairs"],["bench"]],load:["db"]}, bridge:{load:["db","kb","bb"]},
+ nordic:{rq:[["chair"]]}, calf:{rq:[["stairs"]]}, monster:{rq:[["loop"]]},
+ klimmzug:{rq:[["bar"]]}, chinup:{rq:[["bar"]]}, negativ:{rq:[["bar"]]}, skapula:{rq:[["bar"]]}, hang:{rq:[["bar"]]}, kneeraise:{rq:[["bar"]]},
+ rudern1:{rq:[["db","chair"],["db","bench"]],load:["db"]}, rudern2:{rq:[["db"]],load:["db"]}, revfly:{rq:[["db"]],load:["db"]}, curl:{rq:[["db"]],load:["db"]},
+ floorpress:{rq:[["db"]],load:["db"]}, ohp:{rq:[["db"]],load:["db"]}, arnold:{rq:[["db"]],load:["db"]}, pushpress:{rq:[["db"]],load:["db"]},
+ dips:{rq:[["dips"]]}, renegade:{rq:[["db"]],load:["db"]}, tgu:{rq:[["db"],["kb"]],load:["kb","db"]}, suitcase:{rq:[["db"],["kb"]],load:["db","kb"]},
+ farmer:{rq:[["db"],["kb"]],load:["db","kb"]}, copen:{rq:[["chair"],["bench"]]}, pallof:{rq:[["band"],["loop"]]}, facepull:{rq:[["band"],["loop"]]},
+ seitheben:{rq:[["db"]],load:["db"]}, shrug:{rq:[["db"],["kb"]],load:["db","kb"]},
+ tischrudern:{rq:[["table"]]}, stuhldips:{rq:[["chair"]]}, bankdruecken:{rq:[["db","bench"]],load:["db"]},
+ bandrudern:{rq:[["band"]]}, banddruecken:{rq:[["band"]]}, bandlatzug:{rq:[["band"]]},
+ lhrdl:{rq:[["bb"]],load:["bb"]}, lhrudern:{rq:[["bb"]],load:["bb"]}, lhpress:{rq:[["bb"]],load:["bb"]}, trxrow:{rq:[["trx"]]}, seilspringen:{rq:[["rope"]]},
+};
+
+/* Ausrüstungs-Auswahl im Einstieg */
+window.EQUIP=[
+ ["Zuhause",[["chair","Stuhl oder Sofa","für Splitkniebeuge, Rudern, Step-ups"],["table","Stabiler Tisch","für Rudern unter dem Tisch"],["stairs","Treppe oder Stufe","für Wadenheben, Step-ups"]]],
+ ["Gewichte",[["db","Kurzhanteln","Gewichte pro Hantel antippen",[2,4,5,6,8,10,12,15,17.5,20,22.5,25,30]],["kb","Kettlebell","Gewichte antippen",[6,8,10,12,16,20,24,32]],["bb","Langhantel mit Scheiben","Gesamtgewicht, das du auflegen kannst",[30,40,50,60,80,100,120]],["bench","Hantelbank",""]]],
+ ["Bänder",[["loop","Mini-Loop-Bänder","kurze Gummiringe"],["band","Lange Bänder mit Griffen","inkl. Türanker oder Superbands"]]],
+ ["Zug und Stütz",[["bar","Klimmzugstange",""],["dips","Dip-Station oder Barren",""],["trx","Schlingentrainer",""]]],
+ ["Ausdauer",[["rope","Springseil",""]]],
+];
+
+window.POOLS=Object.assign(window.POOLS,{
+ pushH:["liegestuetz","floorpress","archer","pushplus","bankdruecken","banddruecken"],
+ pushV:["ohp","arnold","pushpress","pike","lhpress"],
+ pushMix:["dips","liegestuetz","ohp","archer","pike","arnold","floorpress","stuhldips","bankdruecken","banddruecken"],
+ knee:["bulgarian","goblet","rueckausfall","kniebeuge"],
+ hip:["rdl","slrdl","swing","slthrust","lhrdl","bridge"],
+ single:["cossack","seitausfall","stepup","rueckausfall"],
+ lowerMix:["bulgarian","goblet","rdl","slrdl","swing","stepup","kniebeuge","slthrust","lhrdl"],
+ pullV:["klimmzug","chinup","negativ","bandlatzug"],
+ pullH:["rudern1","rudern2","revfly","tischrudern","tuerrudern","bandrudern","lhrudern","trxrow"],
+ pullMix:["klimmzug","chinup","rudern1","rudern2","negativ","tischrudern","bandrudern","lhrudern","trxrow","bandlatzug","tuerrudern"],
+ antiExt:["deadbug","kneeraise","mcgill","bearcrawl","bergsteiger"],
+ antiRot:["birddog","pallof","renegade","tgu"],
+ antiLat:["sideplank","suitcase","farmer","copen"],
+ neck:["facepull","seitheben","shrug","ytw","serratus","hang","superman"],
+ legs:["calf","tibialis","pogo","monster","nordic","slidecurl"],
+ mob:["hipflexor","deepsquat"],
+ pullBW:["superman","ytw"],
+ run:["int44","int33","dauerlauf"], rope:["seilspringen"], walk:["gehen"],
+});
+/* Station-Typ -> Ersatzpools, falls mit der Ausrüstung nichts im Pool geht */
+window.STATION_FALLBACK={push:["pushH","pushMix","pushV"],lower:["knee","single","hip","lowerMix"],pull:["pullH","pullMix","pullV","pullBW","neck"],core:["antiExt","antiRot","antiLat"],x5:["neck","legs","mob"],x6:["antiLat","antiRot","antiExt"]};
+window.SESS_T=[
+ {id:"S1",name:"Ganzkörper A",sub:"Knie · vertikal ziehen · horizontal drücken",st:[["push","pushH","Druck"],["lower","knee","Beine"],["pull","pullV","Zug"],["core","antiExt","Rumpf"],["x5","neck","Schulter"],["x6","antiLat","Rumpf 2"]]},
+ {id:"S2",name:"Ganzkörper B",sub:"Hüfte · horizontal ziehen · über Kopf drücken",st:[["push","pushV","Druck"],["lower","hip","Beine"],["pull","pullH","Zug"],["core","antiRot","Rumpf"],["x5","legs","Beine 2"],["x6","antiExt","Rumpf 2"]]},
+ {id:"S3",name:"Ganzkörper C",sub:"Einbeinig · Zug-Mix · Druck-Mix",st:[["push","pushMix","Druck"],["lower","single","Beine"],["pull","pullMix","Zug"],["core","antiLat","Rumpf"],["x5","neck","Schulter"],["x6","antiRot","Rumpf 2"]]},
+ {id:"S4",name:"Ganzkörper D",sub:"Gemischt",st:[["push","pushH","Druck"],["lower","lowerMix","Beine"],["pull","pullMix","Zug"],["core","antiExt","Rumpf"],["x5","legs","Beine 2"],["x6","antiLat","Rumpf 2"]]},
+];
+window.CARDIO={run:{pool:"run",label:"Lauf",fig:"int44"},rope:{pool:"rope",label:"Seilspringen",fig:"seilspringen"},walk:{pool:"walk",label:"Gehen",fig:"farmer",nodb:true}};
+window.WARMUP=[
+ {n:"Hampelmann oder auf der Stelle marschieren",src:"hampelmann",t:30},
+ {n:"Kniebeugen ohne Gewicht",src:"kniebeuge",t:30},
+ {n:"Hüftbeuge ohne Gewicht",src:"rdl",t:30,nodb:true},
+ {n:"Arme kreisen, Schultern lockern",src:"seitheben",t:30,nodb:true},
+];
