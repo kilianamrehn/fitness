@@ -194,6 +194,13 @@
           const pl=(c)=>{const p1=add(add(c,u,-3),n,-14),p2=add(add(c,u,3),n,-14),p3=add(add(c,u,3),n,14),p4=add(add(c,u,-3),n,14);return `<path d="M${p1.map(f).join(' ')}L${p2.map(f).join(' ')}L${p3.map(f).join(' ')}L${p4.map(f).join(' ')}Z" fill="${C.eq}" stroke="${C.eq}" stroke-width="3" stroke-linejoin="round"/>`;};
           return `<line x1="${f(e1[0])}" y1="${f(e1[1])}" x2="${f(e2[0])}" y2="${f(e2[1])}" stroke="${C.eq2}" stroke-width="3.5" stroke-linecap="round"/>`+pl(add(a,u,-24))+pl(add(b,u,24));}
         return `<circle cx="${f(a[0])}" cy="${f(a[1])}" r="${f(15*(pr.s||1))}" fill="${C.eq}"/><circle cx="${f(a[0])}" cy="${f(a[1])}" r="${f(10*(pr.s||1))}" fill="none" stroke="${C.eq2}" stroke-width="1.5"/><circle cx="${f(a[0])}" cy="${f(a[1])}" r="2.6" fill="${C.eq2}"/>`;}
+      case 'lm': { // Landmine: Stange vom Drehpunkt am Boden (pr.from) durch die Hand (pr.j), Scheibe am Hantelende knapp hinter der Hand
+        const a=pt(P,pr.from),h=pt(P,pr.j||'ha1');const dx=h[0]-a[0],dy=h[1]-a[1],l=Math.hypot(dx,dy)||1,u=[dx/l,dy/l];
+        const e=add(h,u,pr.over!==undefined?pr.over:8),pc=add(h,u,-(pr.plate!==undefined?pr.plate:16)),n=[-u[1],u[0]],r=(pr.s||1)*15;
+        const q=(c,s)=>[add(add(c,u,-3*s),n,-r),add(add(c,u,3*s),n,-r),add(add(c,u,3*s),n,r),add(add(c,u,-3*s),n,r)];
+        const pl=q(pc,1);
+        return `<circle cx="${f(a[0])}" cy="${f(a[1])}" r="4" fill="${C.line}"/><line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(e[0])}" y2="${f(e[1])}" stroke="${C.eq2}" stroke-width="3.5" stroke-linecap="round"/>`+
+          `<path d="M${pl.map(p=>p.map(f).join(' ')).join('L')}Z" fill="${C.eq}" stroke="${C.eq}" stroke-width="3" stroke-linejoin="round"/>`;}
       case 'kb': { // Kettlebell hängt am Griff in Unterarmrichtung
         const a=pt(P,pr.j||'ha1');const s=pr.j&&pr.j.slice(-1);let d=[0,1];
         if(s&&P['el'+s]){const e=P['el'+s];const dx=a[0]-e[0],dy=a[1]-e[1],l=Math.hypot(dx,dy)||1;d=[dx/l,dy/l];}
@@ -214,7 +221,7 @@
     const front=(ex.view||'side')==='front';
     const hl=ex.hl||[];
     const props=ex.props||[];
-    const HELD=['db','kb','bb'];
+    const HELD=['db','kb','bb','lm'];
     const back=props.filter(p=>!p.layer&&!HELD.includes(p.t)&&!['band','loop','towel','rope'].includes(p.t)||p.layer==='back');
     const by=j=>props.filter(p=>HELD.includes(p.t)&&(p.j||'ha1').endsWith(j)&&p.layer!=='back'&&p.layer!=='front');
     const fronts=props.filter(p=>p.layer==='front'||(['band','loop','towel','rope'].includes(p.t)&&!p.layer));
@@ -246,6 +253,7 @@
     const F=ex.frames;const total=F.reduce((s,f)=>s+(f.d||800)+(f.hold||0),0);
     for(let i=0;i<=40;i++){const P=framePose(ex,total*i/40);for(const k in P){if(k[0]==='_')continue;const p=P[k];x0=Math.min(x0,p[0]-12);y0=Math.min(y0,p[1]-12);x1=Math.max(x1,p[0]+12);y1=Math.max(y1,p[1]+12);}}
     for(const p of ex.props||[]){
+      if(p.t==='lm'&&Array.isArray(p.from)){x0=Math.min(x0,p.from[0]-8);x1=Math.max(x1,p.from[0]+8);y1=Math.max(y1,p.from[1]+6);}
       if(p.t==='bar'){x0=Math.min(x0,p.x1-8);x1=Math.max(x1,p.x2+8);y0=Math.min(y0,p.y-(p.frame?20:8));}
       if(p.t==='bench'||p.t==='box'||p.t==='step'||p.t==='table'){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x+p.w);y0=Math.min(y0,p.y);}
       if(p.t==='dips'){x0=Math.min(x0,p.x-(p.w||26)-8);x1=Math.max(x1,p.x+(p.w||26)+8);}

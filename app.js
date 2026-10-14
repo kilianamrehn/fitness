@@ -44,8 +44,8 @@ async function cloudPush(){try{await CLOUD.push(snapshot());}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&window.CLOUD&&CLOUD.user){clearTimeout(pushT);cloudPush();}});
 
 /* ---------------- Profil ---------------- */
-const DEFPROF={eq:{chair:true,table:false,stairs:false,db:[],kb:[],bb:0,bench:false,rack:false,loop:false,band:false,bar:false,dips:false,trx:false,rope:false},freq:3,dur:15,cardio:'run',cardioN:1,level:'fort'};
-const KILIANPROF={eq:{chair:true,table:true,stairs:true,db:[5,10,15],kb:[],bb:0,bench:false,rack:false,loop:true,band:false,bar:true,dips:true,trx:false,rope:false},freq:3,dur:15,cardio:'run',cardioN:1,level:'fort'};
+const DEFPROF={eq:{chair:true,table:false,stairs:false,db:[],kb:[],bb:0,bench:false,rack:false,lm:false,loop:false,band:false,bar:false,dips:false,trx:false,rope:false},freq:3,dur:15,cardio:'run',cardioN:1,level:'fort'};
+const KILIANPROF={eq:{chair:true,table:true,stairs:true,db:[5,10,15],kb:[],bb:0,bench:false,rack:false,lm:false,loop:true,band:false,bar:true,dips:true,trx:false,rope:false},freq:3,dur:15,cardio:'run',cardioN:1,level:'fort'};
 const prof=()=>S.profile||DEFPROF;
 function has(k){const e=prof().eq;if(k==='db'||k==='kb')return (e[k]||[]).length>0;if(k==='bb')return (e.bb||0)>0;return !!e[k];}
 function allowed(id){if(!EX[id])return false;const r=(window.REQ||{})[id];if(r&&r.rq&&!r.rq.some(g=>g.every(has)))return false;
@@ -295,7 +295,7 @@ function vidStop(){clearInterval(VPT);try{VP&&VP.destroy&&VP.destroy();}catch(e)
 function doseChips(id){
   const x=EX[id];const ch=[];
   ch.push(x.tgt+(x.type==='time'?'':' Wdh')+(x.side?' pro Seite':''));
-  const src=loadSrc(id);if(x.kg&&src){const k=fitKg(x.kg,id);if(k)ch.push((x.n2&&src!=='bb'?'2 × ':'')+k+' kg');}
+  const src=loadSrc(id);if(x.kg&&src){const k=fitKg(x.kg,id);if(k)ch.push((x.n2&&src!=='bb'&&src!=='lm'?'2 × ':'')+k+' kg'+(src==='lm'?' Scheiben':''));}
   if(x.type!=='run'&&['beine','zug','druck'].includes(x.cat))ch.push('1–2 Wdh in Reserve');
   return ch;
 }
@@ -658,7 +658,7 @@ function stepEx(st){
     <div class="pl-cues">${x.c.map(c=>`<div>· ${esc(c)}</div>`).join('')}${x.e?`<div class="pl-warn">Achtung: ${esc(x.e)}</div>`:''}</div>
     <div class="pl-tools"><button class="th up ${rateOf(id)===1?'on':''}" data-rate="1" data-id="${id}">${I.up}</button><button class="th down ${rateOf(id)===-1?'on':''}" data-rate="-1" data-id="${id}">${I.down}</button><button id="swp">${I.swap} Tauschen</button><button id="skp">${I.skip} Überspringen</button><button id="inf">${I.info}</button></div>`,
    (time?`<div class="timer"><button class="iconbtn" id="tm">−</button><div class="tring" id="tr">${ringT(1)}<b id="tv">${mmss(P.val)}</b></div><button class="iconbtn" id="tp">+</button>${x.side?'<div class="tside" id="tsd">Seite 1</div>':''}</div>`
-         :`${loadSrc(id)?`<div class="kgrow" id="kgrow"><span class="kgl">${loadSrc(id)==='bb'?'kg gesamt':x.n2?'kg je Hantel':'kg'}</span><div class="kgch">${kgChips(weights(id),P.kg)}</div></div>`:''}
+         :`${loadSrc(id)?`<div class="kgrow" id="kgrow"><span class="kgl">${loadSrc(id)==='bb'?'kg gesamt':loadSrc(id)==='lm'?'kg Scheiben':x.n2?'kg je Hantel':'kg'}</span><div class="kgch">${kgChips(weights(id),P.kg)}</div></div>`:''}
            <div class="logger"><div class="step"><button id="vm">−</button><div class="val"><b id="vv">${P.val}</b><span>Wdh${x.side?' / Seite':''}</span></div><button id="vp">+</button></div></div>`)+
     `${setGrid(id,st)}
      <button class="bigbtn" id="done">${time?I.play+' Start':I.check+' Satz fertig'}</button>`);
@@ -697,6 +697,7 @@ function stepEx(st){
 }
 function weights(id){const src=id?loadSrc(id):'db';const e=prof().eq;let w=[0];
   if(src==='db')w=w.concat(e.db||[]);else if(src==='kb')w=w.concat(e.kb||[]);else if(src==='bb'){for(let k=20;k<=(e.bb||0);k+=5)w.push(k);}
+  else if(src==='lm'){const mx=Math.max(0,(e.bb||0)-20);w=w.concat([2.5,5,7.5,10,12.5,15,17.5,20,25,30,35,40].filter(k=>k<=mx));}
   return [...new Set(w)].sort((a,b)=>a-b);}
 function fitKg(kg,id){if(kg==null)return kg;const w=weights(id);let best=w[0];for(const x of w)if(x<=kg)best=x;if(best===0&&kg>0&&w.length>1)best=w[1];return best;}
 function kgSheet(cb,id){

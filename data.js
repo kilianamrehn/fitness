@@ -195,16 +195,16 @@ window.WARMUP=[
 /* Sessions und Pools */
 window.POOLS={
  pushH:["liegestuetz","floorpress","archer","pushplus"],
- pushV:["ohp","arnold","pushpress","pike"],
- pushMix:["dips","liegestuetz","ohp","archer","pike","arnold","floorpress"],
- knee:["bulgarian","goblet","rueckausfall"],
- hip:["rdl","slrdl","swing","slthrust"],
- single:["cossack","seitausfall","stepup","rueckausfall"],
+ pushV:["ohp","arnold","pushpress","pike","lmpress"],
+ pushMix:["dips","liegestuetz","ohp","archer","pike","arnold","floorpress","lmpress"],
+ knee:["bulgarian","goblet","rueckausfall","lmsquat"],
+ hip:["rdl","slrdl","swing","slthrust","lmslrdl"],
+ single:["cossack","seitausfall","stepup","rueckausfall","lmslrdl"],
  pullV:["klimmzug","chinup","negativ"],
- pullH:["rudern1","rudern2","revfly"],
- pullMix:["klimmzug","chinup","rudern1","rudern2","negativ"],
+ pullH:["rudern1","rudern2","revfly","lmrow"],
+ pullMix:["klimmzug","chinup","rudern1","rudern2","negativ","lmrow"],
  antiExt:["deadbug","kneeraise","mcgill","bearcrawl"],
- antiRot:["birddog","pallof","renegade","tgu"],
+ antiRot:["birddog","pallof","renegade","tgu","lmrainbow"],
  antiLat:["sideplank","suitcase","farmer","copen"],
  neck:["facepull","seitheben","shrug","ytw","serratus","hang"],
  legs:["calf","tibialis","pogo","monster","nordic","slidecurl"],
@@ -243,6 +243,18 @@ Object.assign(window.EX,{
   c:["Band oben an der Tür befestigt, kniend, Arme lang", "Ellbogen nach unten zu den Hüften ziehen", "Brust aufrecht, Schultern tief", "Kontrolliert zurück nach oben"],e:"Mit dem Oberkörper nach hinten mitziehen.",src:["https://ie.physitrack.com/home-exercise-video/lat-pull-down-with-resistance-band"],p:"Stärkeres Band",r:"Leichteres Band"},
  lhkniebeuge:{n:"Langhantel-Kniebeuge",cat:"beine",pat:"Knie",m:"Quadrizeps, Gesäß, Adduktoren",type:"reps",tgt:"6–10",def:8,kg:40,g:"B",
   c:["Stange im Rack auf Brustbeinhöhe, Ablagen knapp unter deinem tiefsten Punkt", "Stange auf dem oberen Trapez, Griff etwas breiter als schulterbreit", "Hüfte und Knie gleichzeitig beugen, Knie folgen den Zehen", "Mindestens bis parallel, Fersen am Boden, zügig hochdrücken"],e:"Knie fallen nach innen, Fersen heben ab.",src:["https://www.strengthlog.com/squat/", "https://www.youtube.com/watch?v=-bJIpOq-LWk"],p:"Mehr Gewicht",r:"Weniger Tiefe, leichter"},
+ lmclean:{n:"Landmine Rotational Clean & Press",cat:"beine",pat:"Explosiv",m:"Gesäß, Beine, schräge Bauchmuskeln, Schultern",type:"reps",side:true,tgt:"3–5",def:4,kg:5,g:"C",
+  c:["Seitlich zur Stange stehen, Ende neben dem Außenfuß", "Aus der Hüfte strecken, nicht aus den Armen reißen", "Hinteren Fuß aufdrehen, Hüfte zur Stange rotieren", "Stange an die Schulter fangen, direkt hochdrücken"],e:"Die Stange wird mit den Armen hochgezogen statt mit Hüftstreckung und Rotation beschleunigt.",src:["https://www.trainheroic.com/blog/6-landmine-exercises-for-total-body-strength/", "https://bodybuilding.com/content/the-5-essential-landmine-exercises.html"],p:"Mehr Gewicht, schneller Wechsel",r:"Nur Rotational Press ohne Clean"},
+ lmsquat:{n:"Landmine-Kniebeuge",cat:"beine",pat:"Knie",m:"Quadrizeps, Gesäß, Adduktoren",type:"reps",tgt:"8–10",def:8,kg:20,g:"B",
+  c:["Stangenende mit beiden Händen vor dem Brustbein", "Füße etwas breiter als hüftbreit, leicht nach außen", "Gerade nach unten setzen, Brust bleibt hoch", "Ganzer Fuß drückt, Knie folgen den Zehen"],e:"Gewicht wandert auf die Zehen und der Oberkörper kippt nach vorn, statt aufrecht in die Tiefe zu sitzen.",src:["https://www.strengthlog.com/landmine-squat/", "https://www.coachweb.com/leg-exercises/4920/how-to-nail-the-landmine-squat"],p:"Mehr Gewicht, Pause unten",r:"Goblet-Kniebeuge, weniger Tiefe"},
+ lmpress:{n:"Einarmiges Landmine-Push-Press",cat:"druck",pat:"Vertikal drücken",m:"Schultern, Trizeps, obere Brust, Beine",type:"reps",side:true,tgt:"6–8",def:6,kg:10,g:"B",
+  c:["Versetzter Stand, hinterer Fuß auf Seite der Druckhand", "Stangenende an der Schulter, Rumpf fest", "Kurz und schnell in die Knie dippen, dann drücken", "Oben Arm strecken, langsam zur Schulter senken"],e:"Der Dip wird zu tief und langsam oder der Oberkörper lehnt sich zurück ins Hohlkreuz.",src:["https://www.trainheroic.com/blog/6-landmine-exercises-for-total-body-strength/", "https://www.strengthlog.com/one-arm-landmine-press/"],p:"Mehr Gewicht, Split Jerk",r:"Strikte Landmine-Press im Halbknien"},
+ lmrow:{n:"Einarmiges Landmine-Rudern im Ausfallschritt",cat:"zug",pat:"Horizontal ziehen",m:"Latissimus, oberer Rücken, Bizeps",type:"reps",side:true,tgt:"8–10",def:8,kg:20,g:"B",
+  c:["Ausfallschritt, Unterarm der freien Hand aufs Knie", "Rücken lang, Oberkörper nach vorn gelehnt", "Ellbogen Richtung Hüfte ziehen, nicht zur Achsel", "Unten kurz lang werden lassen, Rumpf bleibt ruhig"],e:"Der Oberkörper dreht beim Ziehen auf und richtet sich auf, statt dass der Arm die Arbeit macht.",src:["https://www.trainheroic.com/blog/6-landmine-exercises-for-total-body-strength/", "https://bodybuilding.com/content/the-5-essential-landmine-exercises.html"],p:"Mehr Gewicht, Pause oben",r:"Weniger Gewicht, Hand auf Bank"},
+ lmslrdl:{n:"Einbeiniges Landmine-Kreuzheben",cat:"beine",pat:"Hüfte, einbeinig",m:"Hintere Oberschenkel, Gesäß, Gleichgewicht",type:"reps",side:true,tgt:"8",def:8,kg:10,g:"B",
+  c:["Seitlich zur Stange, innere Hand am Ende", "Standbein ist das äußere, Knie leicht gebeugt", "Inneres Bein nach hinten, Hüfte schiebt zurück", "Becken bleibt gerade, Rücken neutral"],e:"Die Hüfte des freien Beins dreht nach oben auf und der Rücken rundet, um mehr Tiefe zu bekommen.",src:["https://www.trainheroic.com/blog/6-landmine-exercises-for-total-body-strength/", "https://fitnessvolt.com/landmine-rdls/"],p:"Mehr Gewicht, ohne Stütze",r:"Fersen-Kickstand-RDL"},
+ lmrainbow:{n:"Landmine Rainbow",cat:"rumpf",pat:"Anti-Rotation",m:"Schräge Bauchmuskeln, gerader Bauchmuskel, Schultern",type:"reps",side:true,tgt:"6–8",def:6,kg:0,g:"B",
+  c:["Frontal zur Stange, Füße schulterbreit, Knie locker", "Stangenende mit beiden Händen über dem Kopf", "Langsam im Bogen zu einer Hüfte senken", "Hüfte und Brust bleiben nach vorn, kein Mitdrehen"],e:"Rumpf und Hüfte drehen mit dem Bogen mit, damit wird aus Anti-Rotation eine Rotation.",src:["https://www.trainheroic.com/blog/6-landmine-exercises-for-total-body-strength/", "https://thebodyblueprint.com/landminerainbow/"],p:"Mehr Gewicht, größerer Bogen",r:"Kleinerer Bogen, im Kniestand"},
  lhrdl:{n:"Rumänisches Kreuzheben, Langhantel",cat:"beine",pat:"Hüfte",m:"Hintere Oberschenkel, Gesäß",type:"reps",tgt:"8–10",def:8,kg:40,g:"B",
   c:["Hüftbreit, Stange eng an den Beinen", "Hüfte nach hinten, Knie leicht gebeugt", "Rücken neutral, nur so tief wie er gerade bleibt", "Hüfte nach vorn schieben bis zum Stand"],e:"Rücken rundet, Stange wandert vom Körper weg.",src:["https://www.nasm.org/resource-center/exercise-library/romanian-deadlift-barbell", "https://www.catalystathletics.com/exercise/101/Romanian-Deadlift-RDL/"],p:"Mehr Gewicht",r:"Weniger Tiefe"},
  lhrudern:{n:"Langhantel-Rudern",cat:"zug",pat:"Horizontal ziehen",m:"Rücken",type:"reps",tgt:"8–12",def:10,kg:30,g:"B",
@@ -266,6 +278,12 @@ Object.assign(window.EX,{
 /* Ausrüstung: Anforderungen pro Übung. rq = Liste von Alternativen, jede Alternative = alle Geräte nötig.
    load = Gewichtsquelle (optional, wenn nicht in rq). Haushalt: Tür, Wand, Boden, Handtuch gibt es immer. */
 window.REQ={
+ lmrainbow:{rq:[["bb","lm"]],load:["lm"]},
+ lmslrdl:{rq:[["bb","lm"]],load:["lm"]},
+ lmrow:{rq:[["bb","lm"]],load:["lm"]},
+ lmpress:{rq:[["bb","lm"]],load:["lm"]},
+ lmsquat:{rq:[["bb","lm"]],load:["lm"]},
+ lmclean:{rq:[["bb","lm"]],load:["lm"]},
  bulgarian:{rq:[["chair"],["bench"]],load:["db","kb"]}, goblet:{rq:[["db"],["kb"]],load:["db","kb"]}, rueckausfall:{load:["db","kb"]},
  rdl:{rq:[["db"],["kb"]],load:["db","kb"]}, slrdl:{load:["db","kb"]}, swing:{rq:[["db"],["kb"]],load:["kb","db"]}, slthrust:{rq:[["chair"],["bench"]],load:["db","kb"]},
  cossack:{load:["db","kb"]}, seitausfall:{load:["db"]}, stepup:{rq:[["chair"],["stairs"],["bench"]],load:["db"]}, bridge:{load:["db","kb","bb"]},
@@ -284,7 +302,7 @@ window.REQ={
 /* Ausrüstungs-Auswahl im Einstieg */
 window.EQUIP=[
  ["Zuhause",[["chair","Stuhl oder Sofa","für Splitkniebeuge, Rudern, Step-ups"],["table","Stabiler Tisch","für Rudern unter dem Tisch"],["stairs","Treppe oder Stufe","für Wadenheben, Step-ups"]]],
- ["Gewichte",[["db","Kurzhanteln","Gewichte pro Hantel antippen",[2,4,5,6,8,10,12,15,17.5,20,22.5,25,30]],["kb","Kettlebell","Gewichte antippen",[6,8,10,12,16,20,24,32]],["bb","Langhantel mit Scheiben","Gesamtgewicht, das du auflegen kannst",[30,40,50,60,80,100,120]],["bench","Hantelbank",""],["rack","Kniebeugenständer oder Rack","zum Ablegen der Langhantel"]]],
+ ["Gewichte",[["db","Kurzhanteln","Gewichte pro Hantel antippen",[2,4,5,6,8,10,12,15,17.5,20,22.5,25,30]],["kb","Kettlebell","Gewichte antippen",[6,8,10,12,16,20,24,32]],["bb","Langhantel mit Scheiben","Gesamtgewicht, das du auflegen kannst",[30,40,50,60,80,100,120]],["bench","Hantelbank",""],["rack","Kniebeugenständer oder Rack","zum Ablegen der Langhantel"],["lm", "Landmine oder Zimmerecke", "Langhantelende in Landmine-Halter oder mit Handtuch in eine Ecke klemmen"]]],
  ["Bänder",[["loop","Mini-Loop-Bänder","kurze Gummiringe"],["band","Lange Bänder mit Griffen","inkl. Türanker oder Superbands"]]],
  ["Zug und Stütz",[["bar","Klimmzugstange",""],["dips","Dip-Station oder Barren",""],["trx","Schlingentrainer",""]]],
  ["Ausdauer",[["rope","Springseil",""]]],
@@ -292,17 +310,17 @@ window.EQUIP=[
 
 window.POOLS=Object.assign(window.POOLS,{
  pushH:["liegestuetz","floorpress","archer","pushplus","bankdruecken","banddruecken"],
- pushV:["ohp","arnold","pushpress","pike","lhpress"],
- pushMix:["dips","liegestuetz","ohp","archer","pike","arnold","floorpress","stuhldips","bankdruecken","banddruecken"],
- knee:["bulgarian","goblet","rueckausfall","kniebeuge","lhkniebeuge"],
- hip:["rdl","slrdl","swing","slthrust","lhrdl","bridge"],
- single:["cossack","seitausfall","stepup","rueckausfall"],
- lowerMix:["bulgarian","goblet","rdl","slrdl","swing","stepup","kniebeuge","slthrust","lhrdl","lhkniebeuge"],
+ pushV:["ohp","arnold","pushpress","pike","lhpress","lmpress"],
+ pushMix:["dips","liegestuetz","ohp","archer","pike","arnold","floorpress","stuhldips","bankdruecken","banddruecken","lmpress"],
+ knee:["bulgarian","goblet","rueckausfall","kniebeuge","lhkniebeuge","lmsquat"],
+ hip:["rdl","slrdl","swing","slthrust","lhrdl","bridge","lmslrdl"],
+ single:["cossack","seitausfall","stepup","rueckausfall","lmslrdl"],
+ lowerMix:["bulgarian","goblet","rdl","slrdl","swing","stepup","kniebeuge","slthrust","lhrdl","lhkniebeuge","lmsquat","lmclean"],
  pullV:["klimmzug","chinup","negativ","bandlatzug"],
- pullH:["rudern1","rudern2","revfly","tischrudern","tuerrudern","bandrudern","lhrudern","trxrow"],
- pullMix:["klimmzug","chinup","rudern1","rudern2","negativ","tischrudern","bandrudern","lhrudern","trxrow","bandlatzug","tuerrudern"],
+ pullH:["rudern1","rudern2","revfly","tischrudern","tuerrudern","bandrudern","lhrudern","trxrow","lmrow"],
+ pullMix:["klimmzug","chinup","rudern1","rudern2","negativ","tischrudern","bandrudern","lhrudern","trxrow","bandlatzug","tuerrudern","lmrow"],
  antiExt:["deadbug","kneeraise","mcgill","bearcrawl","bergsteiger"],
- antiRot:["birddog","pallof","renegade","tgu"],
+ antiRot:["birddog","pallof","renegade","tgu","lmrainbow"],
  antiLat:["sideplank","suitcase","farmer","copen"],
  neck:["facepull","seitheben","shrug","ytw","serratus","hang","superman"],
  legs:["calf","tibialis","pogo","monster","nordic","slidecurl"],
@@ -315,13 +333,13 @@ window.POOLS=Object.assign(window.POOLS,{
 /* Station-Typ -> Ersatzpools, falls mit der Ausrüstung nichts im Pool geht (Schlüssel ohne Ziffer) */
 window.STATION_FALLBACK={push:["pushH","pushMix","pushV"],lower:["knee","single","hip","lowerMix"],pull:["pullH","pullMix","pullV","pullBW","neck"],core:["antiExt","antiRot","antiLat"],x5:["neck","legs","mob"],x6:["antiLat","antiRot","antiExt"],x:["neck","legs","mob","antiLat"],x10:["feet","legs","neck"]};
 /* Ersatz je Pool: bleibt in derselben Kategorie (Rumpf bleibt Rumpf, Füße werden nicht zu schweren Beinübungen) */
-window.POOL_FB={pushH:["pushMix","pushV"],pushV:["pushMix","pushH"],pushMix:["pushH","pushV"],
- pullH:["pullMix","pullV","pullBW","neck"],pullV:["pullMix","pullH","pullBW","neck"],pullMix:["pullH","pullV","pullBW","neck"],pullBW:["neck"],
- knee:["single","lowerMix","hip"],hip:["lowerMix","single","knee"],single:["knee","lowerMix","hip"],lowerMix:["knee","hip","single"],
- antiExt:["antiRot","antiLat"],antiRot:["antiExt","antiLat"],antiLat:["antiRot","antiExt"],
+window.POOL_FB={pushH:["pushMix","pushV"],pushV:["pushMix","pushH","lmpress"],pushMix:["pushH","pushV","lmpress"],
+ pullH:["pullMix","pullV","pullBW","neck","lmrow"],pullV:["pullMix","pullH","pullBW","neck"],pullMix:["pullH","pullV","pullBW","neck","lmrow"],pullBW:["neck"],
+ knee:["single","lowerMix","hip","lmsquat"],hip:["lowerMix","single","knee","lmslrdl"],single:["knee","lowerMix","hip","lmslrdl"],lowerMix:["knee","hip","single","lmsquat","lmclean"],
+ antiExt:["antiRot","antiLat"],antiRot:["antiExt","antiLat","lmrainbow"],antiLat:["antiRot","antiExt"],
  neck:["pullBW","mob"],legs:["feet","hip"],feet:["mob"],mob:["neck"]};
 /* Für Einsteiger nur selten vorgeschlagen (schwer oder technisch anspruchsvoll) */
-window.ADVANCED=["nordic","archer","tgu","copen","renegade","klimmzug","chinup","dips","pogo"];
+window.ADVANCED=["lmclean","nordic","archer","tgu","copen","renegade","klimmzug","chinup","dips","pogo"];
 /* Einheiten. Reihenfolge der Stationen = Priorität: kurze Einheiten nehmen die ersten n.
    reg: welche Muskelregion die Einheit hart belastet (für 48 h Erholung). */
 window.SESS_T=[
