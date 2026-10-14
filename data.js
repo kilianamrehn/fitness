@@ -217,6 +217,8 @@ Object.assign(window.EX,{
   c:["Türanker hinter dir auf Brusthöhe, Schrittstellung", "Hände neben der Brust, Ellbogen etwa 45°", "Griffe nach vorn drücken, Rumpf fest", "Kontrolliert zurück, Ellbogen nicht hinter den Rumpf"],e:"Ins Hohlkreuz fallen, Schultern rollen vor.",src:["https://ca.physitrack.com/home-exercise-video/band-resisted-chest-press-in-split-stance"],p:"Stärkeres Band",r:"Leichteres Band"},
  bandlatzug:{n:"Latzug mit Band",cat:"zug",pat:"Vertikal ziehen",m:"Latissimus",type:"reps",tgt:"12–15",def:12,kg:null,g:"B",
   c:["Band oben an der Tür befestigt, kniend, Arme lang", "Ellbogen nach unten zu den Hüften ziehen", "Brust aufrecht, Schultern tief", "Kontrolliert zurück nach oben"],e:"Mit dem Oberkörper nach hinten mitziehen.",src:["https://ie.physitrack.com/home-exercise-video/lat-pull-down-with-resistance-band"],p:"Stärkeres Band",r:"Leichteres Band"},
+ lhkniebeuge:{n:"Langhantel-Kniebeuge",cat:"beine",pat:"Knie",m:"Quadrizeps, Gesäß, Adduktoren",type:"reps",tgt:"6–10",def:8,kg:40,g:"B",
+  c:["Stange im Rack auf Brustbeinhöhe, Ablagen knapp unter deinem tiefsten Punkt", "Stange auf dem oberen Trapez, Griff etwas breiter als schulterbreit", "Hüfte und Knie gleichzeitig beugen, Knie folgen den Zehen", "Mindestens bis parallel, Fersen am Boden, zügig hochdrücken"],e:"Knie fallen nach innen, Fersen heben ab.",src:["https://www.strengthlog.com/squat/", "https://www.youtube.com/watch?v=-bJIpOq-LWk"],p:"Mehr Gewicht",r:"Weniger Tiefe, leichter"},
  lhrdl:{n:"Rumänisches Kreuzheben, Langhantel",cat:"beine",pat:"Hüfte",m:"Hintere Oberschenkel, Gesäß",type:"reps",tgt:"8–10",def:8,kg:40,g:"B",
   c:["Hüftbreit, Stange eng an den Beinen", "Hüfte nach hinten, Knie leicht gebeugt", "Rücken neutral, nur so tief wie er gerade bleibt", "Hüfte nach vorn schieben bis zum Stand"],e:"Rücken rundet, Stange wandert vom Körper weg.",src:["https://www.nasm.org/resource-center/exercise-library/romanian-deadlift-barbell", "https://www.catalystathletics.com/exercise/101/Romanian-Deadlift-RDL/"],p:"Mehr Gewicht",r:"Weniger Tiefe"},
  lhrudern:{n:"Langhantel-Rudern",cat:"zug",pat:"Horizontal ziehen",m:"Rücken",type:"reps",tgt:"8–12",def:10,kg:30,g:"B",
@@ -252,13 +254,13 @@ window.REQ={
  seitheben:{rq:[["db"]],load:["db"]}, shrug:{rq:[["db"],["kb"]],load:["db","kb"]},
  tischrudern:{rq:[["table"]]}, stuhldips:{rq:[["chair"]]}, bankdruecken:{rq:[["db","bench"],["bb","bench"]],load:["db","bb"]},
  bandrudern:{rq:[["band"]]}, banddruecken:{rq:[["band"]]}, bandlatzug:{rq:[["band"]]},
- lhrdl:{rq:[["bb"]],load:["bb"]}, lhrudern:{rq:[["bb"]],load:["bb"]}, lhpress:{rq:[["bb"]],load:["bb"]}, trxrow:{rq:[["trx"]]}, seilspringen:{rq:[["rope"]]},
+ lhkniebeuge:{rq:[["bb","rack"]],load:["bb"]}, lhrdl:{rq:[["bb"]],load:["bb"]}, lhrudern:{rq:[["bb"]],load:["bb"]}, lhpress:{rq:[["bb"]],load:["bb"]}, trxrow:{rq:[["trx"]]}, seilspringen:{rq:[["rope"]]},
 };
 
 /* Ausrüstungs-Auswahl im Einstieg */
 window.EQUIP=[
  ["Zuhause",[["chair","Stuhl oder Sofa","für Splitkniebeuge, Rudern, Step-ups"],["table","Stabiler Tisch","für Rudern unter dem Tisch"],["stairs","Treppe oder Stufe","für Wadenheben, Step-ups"]]],
- ["Gewichte",[["db","Kurzhanteln","Gewichte pro Hantel antippen",[2,4,5,6,8,10,12,15,17.5,20,22.5,25,30]],["kb","Kettlebell","Gewichte antippen",[6,8,10,12,16,20,24,32]],["bb","Langhantel mit Scheiben","Gesamtgewicht, das du auflegen kannst",[30,40,50,60,80,100,120]],["bench","Hantelbank",""]]],
+ ["Gewichte",[["db","Kurzhanteln","Gewichte pro Hantel antippen",[2,4,5,6,8,10,12,15,17.5,20,22.5,25,30]],["kb","Kettlebell","Gewichte antippen",[6,8,10,12,16,20,24,32]],["bb","Langhantel mit Scheiben","Gesamtgewicht, das du auflegen kannst",[30,40,50,60,80,100,120]],["bench","Hantelbank",""],["rack","Kniebeugenständer oder Rack","zum Ablegen der Langhantel"]]],
  ["Bänder",[["loop","Mini-Loop-Bänder","kurze Gummiringe"],["band","Lange Bänder mit Griffen","inkl. Türanker oder Superbands"]]],
  ["Zug und Stütz",[["bar","Klimmzugstange",""],["dips","Dip-Station oder Barren",""],["trx","Schlingentrainer",""]]],
  ["Ausdauer",[["rope","Springseil",""]]],
@@ -268,10 +270,10 @@ window.POOLS=Object.assign(window.POOLS,{
  pushH:["liegestuetz","floorpress","archer","pushplus","bankdruecken","banddruecken"],
  pushV:["ohp","arnold","pushpress","pike","lhpress"],
  pushMix:["dips","liegestuetz","ohp","archer","pike","arnold","floorpress","stuhldips","bankdruecken","banddruecken"],
- knee:["bulgarian","goblet","rueckausfall","kniebeuge"],
+ knee:["bulgarian","goblet","rueckausfall","kniebeuge","lhkniebeuge"],
  hip:["rdl","slrdl","swing","slthrust","lhrdl","bridge"],
  single:["cossack","seitausfall","stepup","rueckausfall"],
- lowerMix:["bulgarian","goblet","rdl","slrdl","swing","stepup","kniebeuge","slthrust","lhrdl"],
+ lowerMix:["bulgarian","goblet","rdl","slrdl","swing","stepup","kniebeuge","slthrust","lhrdl","lhkniebeuge"],
  pullV:["klimmzug","chinup","negativ","bandlatzug"],
  pullH:["rudern1","rudern2","revfly","tischrudern","tuerrudern","bandrudern","lhrudern","trxrow"],
  pullMix:["klimmzug","chinup","rudern1","rudern2","negativ","tischrudern","bandrudern","lhrudern","trxrow","bandlatzug","tuerrudern"],

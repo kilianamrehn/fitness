@@ -44,8 +44,8 @@ async function cloudPush(){try{await CLOUD.push(snapshot());}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&window.CLOUD&&CLOUD.user){clearTimeout(pushT);cloudPush();}});
 
 /* ---------------- Profil ---------------- */
-const DEFPROF={eq:{chair:true,table:false,stairs:false,db:[],kb:[],bb:0,bench:false,loop:false,band:false,bar:false,dips:false,trx:false,rope:false},freq:3,dur:15,cardio:'run',cardioN:1,level:'fort'};
-const KILIANPROF={eq:{chair:true,table:true,stairs:true,db:[5,10,15],kb:[],bb:0,bench:false,loop:true,band:false,bar:true,dips:true,trx:false,rope:false},freq:3,dur:15,cardio:'run',cardioN:1,level:'fort'};
+const DEFPROF={eq:{chair:true,table:false,stairs:false,db:[],kb:[],bb:0,bench:false,rack:false,loop:false,band:false,bar:false,dips:false,trx:false,rope:false},freq:3,dur:15,cardio:'run',cardioN:1,level:'fort'};
+const KILIANPROF={eq:{chair:true,table:true,stairs:true,db:[5,10,15],kb:[],bb:0,bench:false,rack:false,loop:true,band:false,bar:true,dips:true,trx:false,rope:false},freq:3,dur:15,cardio:'run',cardioN:1,level:'fort'};
 const prof=()=>S.profile||DEFPROF;
 function has(k){const e=prof().eq;if(k==='db'||k==='kb')return (e[k]||[]).length>0;if(k==='bb')return (e.bb||0)>0;return !!e[k];}
 function allowed(id){if(!EX[id])return false;const r=(window.REQ||{})[id];if(r&&r.rq&&!r.rq.some(g=>g.every(has)))return false;

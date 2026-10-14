@@ -792,6 +792,18 @@ const armTo=(S,H,pick,sd)=>{const s=ik2(S,H,29,26,pick);const k=sd||'';return {[
   props:[{t:'floor',y:FL},{t:'bb',j:'ha1'}],
   frames:[{a:pose(0),d:900,hold:300},{a:pose(0.5),d:900},{a:pose(1),d:600,hold:250},{a:pose(0.5),d:600}]};}
 
+// ---------- Langhantel-Kniebeuge (High Bar) ----------
+// Stange auf dem oberen Trapez knapp hinter der Schulter, Haende greifen sie, Ellbogen zeigen nach unten.
+// Knie und Huefte beugen gleichzeitig bis knapp unter parallel; Rumpfneigung so gewaehlt, dass die Stange
+// immer senkrecht ueber dem Mittelfuss bleibt. Fersen bleiben am Boden.
+{const barOf=(P,t)=>add(add(shOf(P,t),D(t),5),D(t-90),11);
+ const pose=k=>{const th=lerp(90,-4,k),sh=lerp(90,119,k);const P=hipOf([0,0],th,sh);
+  const BX=lerp(-3.5,2,k);const trueBar=(a)=>add(add(shOf(P,a),D(a),3),D(a-90),4);let t=-89;for(let a=-89;a<=-25;a+=0.2){t=a;if(trueBar(a)[0]>=BX)break;}
+  const S=shOf(P,t);return M({torso:r1(t),head:r1(t+(-86-t)*0.55),thigh:r1(th),shin:r1(sh),foot:0},armTo(S,barOf(P,t),lower));};
+ E.lhkniebeuge={view:'side',floor:FL,hl:['thigh'],anchor:{j:'an1',at:[0,0]},
+  props:[{t:'floor',y:FL},{t:'bb',j:'ha1',s:0.8}],
+  frames:[{a:pose(0),d:900,hold:300},{a:pose(0.5),d:700},{a:pose(1),d:600,hold:250},{a:pose(0.5),d:600}]};}
+
 // ---------- Langhantel-Rudern ----------
 // Hueftbeuge ~45 Grad, Knie gebeugt, Rumpf bleibt fix. Stange haengt unter den Schultern und wird senkrecht
 // zum Bauch/unteren Rippen gezogen, Ellbogen nach hinten-oben.
