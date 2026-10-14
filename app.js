@@ -795,7 +795,7 @@ function runEnd(){
 let TAB='home';
 function renderAll(){TODAY=ymd(NOW());WK=wkKey(NOW());
   if(TAB==='home')renderHome();else if(TAB==='lib')renderLib();else if(TAB==='prog')renderProg();else renderKnow();}
-function setTab(t){TAB=t;$$('.view').forEach(v=>{v.classList.toggle('on',v.id==='v-'+t);if(v.id!=='v-'+t){$$('[data-fig]',v).forEach(el=>FIG.unmount(el));v.innerHTML='';}});$$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));window.scrollTo(0,0);renderAll();}
+function setTab(t){TAB=t;$$('.view').forEach(v=>{v.classList.toggle('on',v.id==='v-'+t);if(v.id!=='v-'+t){$$('[data-fig]',v).forEach(el=>FIG.unmount(el));v.innerHTML='';}});$$('.tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));$('#scroller').scrollTop=0;renderAll();}
 /* ---------------- Konto ---------------- */
 const EYE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 function pwField(id,ph,ac){return `<div class="pw"><input id="${id}" type="password" autocomplete="${ac}" placeholder="${ph}" autocapitalize="none" spellcheck="false"><button type="button" class="eye" data-eye="${id}" aria-label="Passwort zeigen">${EYE}</button></div>`;}
@@ -951,3 +951,6 @@ function init(){
 window.addEventListener('DOMContentLoaded',init);
 window.__T={estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
 })();
+
+// iOS 26: nach dem Schliessen der Tastatur bleibt der Viewport verschoben, deshalb zuruecksetzen
+document.addEventListener('focusout',()=>setTimeout(()=>{if(!document.activeElement||!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))window.scrollTo(0,0);},60));
