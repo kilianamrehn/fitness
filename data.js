@@ -123,6 +123,24 @@ window.EX={
   c:["Seitstütz, Ellbogen unter Schulter, Knie auf Stuhl", "Oberes Bein drückt in den Stuhl, Becken hoch", "Kopf bis Knie eine Linie, Becken nicht drehen", "Unteres Bein locker, schwerer: zum Stuhl heben"],e:"Becken sinkt oder knickt nach hinten ab.",src:["https://e3rehab.com/blog/copenhagenplanks/", "https://research.regionh.dk/en/publications/the-adductor-strengthening-programme-prevents-groin-problems-amon/"],p:"Fuß statt Knie auflegen",r:"Unteres Bein stützt mit"},
  plank:{n:"Plank mit Schultertippen",cat:"rumpf",pat:"Anti-Rotation",m:"Rumpf",type:"reps",side:true,tgt:"8",def:8,kg:null,g:"C",
   c:["Hoher Stütz, Hände unter Schultern, Füße breit", "Boden wegdrücken, Bauch und Gesäß fest", "Langsam die Gegenschulter antippen, abwechselnd", "Hüfte bleibt ruhig und waagerecht"],e:"Hüfte schaukelt zur Seite.",src:["https://theprehabguys.com/vimeo-video/tall-plank-shoulder-tap/"],p:"Füße enger",r:"Füße weiter"},
+ halo:{n:"KB Halo",cat:"rumpf",pat:"Anti-Extension",m:"Schultern, Bauch, Obliques, Trizeps",type:"reps",side:true,tgt:"5–8",def:6,kg:8,g:"B",
+  c:["KB kopfüber an den Hörnern, vor der Brust", "Aufrecht stehen, Po fest, Rippen unten", "Glocke eng um den Kopf führen", "Kopf bleibt still, langsam kreisen"],e:"Beim Hinterkopf ins Hohlkreuz fallen und die Rippen aufklappen.",src:["https://www.strengthlog.com/kettlebell-halo"],p:"Schwerere KB, halbkniend",r:"Leichtere KB, sitzend"},
+ windmill:{n:"KB Windmill",cat:"rumpf",pat:"Rotation",m:"Obliques, Glutes, Hamstrings, Schulter",type:"reps",side:true,tgt:"3–5",def:3,kg:8,g:"B",
+  c:["KB oben gesperrt, Blick zur Glocke", "Füße 45° weg von der KB-Seite", "Hüfte zur KB-Seite schieben, dann beugen", "Wirbelsäule lang, nicht seitlich knicken"],e:"Seitlich in der Lendenwirbelsäule abknicken statt aus der Hüfte zu klappen.",src:["https://kettlebellkings.com/blog/heavy-kettlebell-lifts-part-3-windmills", "https://www.boxrox.com/kettlebell-windmill-best-guide/"],p:"Schwerere KB, Bottoms-up",r:"Low Windmill, KB unten in der Hand"},
+ rackcarry:{n:"KB Front-Rack Tragen",cat:"rumpf",pat:"Tragen",m:"Bauch, Obliques, oberer Rücken, Schulter",type:"time",side:true,tgt:"30 s",def:30,kg:12,g:"B",
+  c:["KB im Rack, Unterarm senkrecht, Ellbogen eng", "Groß stehen, nicht zur KB-Seite lehnen", "Rippen unten, kein Hohlkreuz", "Langsam gehen, ruhig weiteratmen"],e:"Sich wegdrehen oder ins Hohlkreuz kippen, um die Last zu halten.",src:["https://www.muscleandstrength.com/exercises/kettlebell-single-arm-racked-carry", "https://www.backfitpro.com/medical-scientific-articles/2012/[63]McGill,S.(2012)Kettlebell-swing-snatch-and-bottoms-up-carry[J.Strength-Condit.Res.].pdf"],p:"Doppelt im Rack, schwerer",r:"Leichter, im Stand halten"},
+ waiter:{n:"KB Kellner-Tragen",cat:"rumpf",pat:"Tragen",m:"Schulter, Bauch, Obliques, Trapez",type:"time",side:true,tgt:"30 s",def:30,kg:8,g:"B",
+  c:["KB über Kopf, Arm gestreckt, Bizeps am Ohr", "Rippen unten, kein Hohlkreuz", "Nicht zur freien Seite lehnen", "Kurze, ruhige Schritte"],e:"Arm wandert nach vorn und der untere Rücken überstreckt.",src:["https://ericcressey.com/exercise-of-the-week-1-arm-bottoms-up-kettlebell-waiters-walk"],p:"Bottoms-up über Kopf",r:"Front-Rack Tragen"},
+ bucarry:{n:"Bottoms-up Tragen",cat:"rumpf",pat:"Tragen",m:"Griff, Rotatorenmanschette, Bauch, Obliques",type:"time",side:true,tgt:"30 s",def:30,kg:8,g:"B",
+  c:["KB kopfüber, Griff fest, Ellbogen eng", "Glocke neben dem Kopf, Unterarm senkrecht", "Rumpf hart machen, sonst kippt die KB", "Zügig gehen, ruhig atmen"],e:"Griff zu locker, die Glocke kippt und man fängt sie mit dem Körper ab.",src:["https://www.backfitpro.com/?p=3296", "https://www.backfitpro.com/medical-scientific-articles/2012/[63]McGill,S.(2012)Kettlebell-swing-snatch-and-bottoms-up-carry[J.Strength-Condit.Res.].pdf"],p:"Schwerere KB, längere Strecke",r:"Normales Front-Rack Tragen"},
+ suitcasedl:{n:"KB Koffer-Kreuzheben",cat:"rumpf",pat:"Anti-Lateralflexion",m:"Obliques, Quadratus lumborum, Glutes, Griff",type:"reps",side:true,tgt:"6–8",def:8,kg:16,g:"B",
+  c:["KB neben dem Fuß, mittig zur Ferse", "Hüfte nach hinten, Rücken lang", "Schultern gerade, nicht zur KB kippen", "Aus den Beinen hochdrücken, Po fest"],e:"Die Schulter auf der KB-Seite sackt ab und der Rumpf knickt seitlich.",src:["https://www.garagegymreviews.com/suitcase-deadlift"],p:"Schwerere KB, Erhöhung entfernen",r:"KB auf Block oder Bücher"},
+ gorillarow:{n:"KB Gorilla Row",cat:"rumpf",pat:"Anti-Rotation",m:"Lats, oberer Rücken, Bauch, Obliques",type:"reps",side:true,tgt:"8–10",def:8,kg:12,g:"B",
+  c:["Breiter Stand, zwei KB zwischen den Füßen", "Hüfte nach hinten, Rücken flach", "Freie Hand drückt fest in die KB", "Zur Hüfte rudern, Becken bleibt ruhig"],e:"Hüfte und Oberkörper kommen hoch und das Becken dreht mit.",src:["https://experiencelife.lifetime.life/article/break-it-down-the-gorilla-row/", "https://www.strengthlog.com/gorilla-row/"],p:"Schwerere KB, Pause oben",r:"Eine KB, freie Hand auf Knie"},
+ pullthrough:{n:"KB Plank Pull-Through",cat:"rumpf",pat:"Anti-Rotation",m:"Bauch, Obliques, Schulter, Glutes",type:"reps",side:true,tgt:"6–8",def:6,kg:8,g:"B",
+  c:["Hoher Stütz, Füße etwas breiter", "KB neben der Hand liegt bereit", "Gegenhand zieht KB unterm Körper durch", "Hüfte bleibt flach, kein Kippen"],e:"Die Hüfte kippt zur Seite oder geht hoch, wenn eine Hand abhebt.",src:["https://www.strengthlog.com/kettlebell-plank-pull-through/"],p:"Füße enger, schwerere KB",r:"Knie am Boden, Füße breit"},
+ kbpullover:{n:"KB Pullover in Rückenlage",cat:"rumpf",pat:"Anti-Extension",m:"Bauch, Lats, Serratus, Trizeps",type:"reps",tgt:"8–10",def:8,kg:8,g:"B",
+  c:["Rückenlage, Knie gebeugt, Füße am Boden", "KB an den Hörnern über der Brust", "Ausatmen, Arme über Kopf senken", "Rücken bleibt am Boden, Rippen unten"],e:"Zu weit nach hinten gehen, bis der untere Rücken abhebt.",src:["https://www.muscleandstrength.com/node/49232"],p:"Beine in 90/90 anheben, schwerer",r:"Kleinerer Weg, leichtere KB"},
 
  /* ---------- Nacken und Schulter ---------- */
  facepull:{n:"Face Pull mit Band",cat:"prehab",pat:"Schulter, oberer Rücken",m:"Hintere Schulter, mittlerer Trapez",type:"reps",tgt:"15–20",def:15,kg:null,g:"B",
@@ -202,11 +220,11 @@ window.POOLS={
  single:["cossack","seitausfall","stepup","rueckausfall","lmslrdl"],
  pullV:["klimmzug","chinup","negativ"],
  pullH:["rudern1","rudern2","revfly","lmrow"],
- pullMix:["klimmzug","chinup","rudern1","rudern2","negativ","lmrow"],
- antiExt:["deadbug","kneeraise","mcgill","bearcrawl"],
- antiRot:["birddog","pallof","renegade","tgu","lmrainbow"],
- antiLat:["sideplank","suitcase","farmer","copen"],
- neck:["facepull","seitheben","shrug","ytw","serratus","hang"],
+ pullMix:["klimmzug","chinup","rudern1","rudern2","negativ","lmrow","gorillarow"],
+ antiExt:["deadbug","kneeraise","mcgill","bearcrawl","halo","kbpullover"],
+ antiRot:["birddog","pallof","renegade","tgu","lmrainbow","gorillarow","pullthrough"],
+ antiLat:["sideplank","suitcase","farmer","copen","windmill","rackcarry","waiter","bucarry","suitcasedl"],
+ neck:["facepull","seitheben","shrug","ytw","serratus","hang","halo"],
  legs:["calf","tibialis","pogo","monster","nordic","slidecurl"],
  mob:["hipflexor","deepsquat","kneewall","hamtuch","figur4","hip9090","schmetterling","wgs","katzekuh","offenesbuch","kindhaltung","tuerrahmen","passthrough","stuhlext"],
  run:["int44","int33","dauerlauf"],
@@ -278,6 +296,15 @@ Object.assign(window.EX,{
 /* Ausrüstung: Anforderungen pro Übung. rq = Liste von Alternativen, jede Alternative = alle Geräte nötig.
    load = Gewichtsquelle (optional, wenn nicht in rq). Haushalt: Tür, Wand, Boden, Handtuch gibt es immer. */
 window.REQ={
+ kbpullover:{rq:[["kb"]],load:["kb"]},
+ pullthrough:{rq:[["kb"]],load:["kb"]},
+ gorillarow:{rq:[["kb"]],load:["kb"]},
+ suitcasedl:{rq:[["kb"]],load:["kb"]},
+ bucarry:{rq:[["kb"]],load:["kb"]},
+ waiter:{rq:[["kb"]],load:["kb"]},
+ rackcarry:{rq:[["kb"]],load:["kb"]},
+ windmill:{rq:[["kb"]],load:["kb"]},
+ halo:{rq:[["kb"]],load:["kb"]},
  lmrainbow:{rq:[["bb","lm"]],load:["lm"]},
  lmslrdl:{rq:[["bb","lm"]],load:["lm"]},
  lmrow:{rq:[["bb","lm"]],load:["lm"]},
@@ -318,11 +345,11 @@ window.POOLS=Object.assign(window.POOLS,{
  lowerMix:["bulgarian","goblet","rdl","slrdl","swing","stepup","kniebeuge","slthrust","lhrdl","lhkniebeuge","lmsquat","lmclean"],
  pullV:["klimmzug","chinup","negativ","bandlatzug"],
  pullH:["rudern1","rudern2","revfly","tischrudern","tuerrudern","bandrudern","lhrudern","trxrow","lmrow"],
- pullMix:["klimmzug","chinup","rudern1","rudern2","negativ","tischrudern","bandrudern","lhrudern","trxrow","bandlatzug","tuerrudern","lmrow"],
- antiExt:["deadbug","kneeraise","mcgill","bearcrawl","bergsteiger"],
- antiRot:["birddog","pallof","renegade","tgu","lmrainbow"],
- antiLat:["sideplank","suitcase","farmer","copen"],
- neck:["facepull","seitheben","shrug","ytw","serratus","hang","superman"],
+ pullMix:["klimmzug","chinup","rudern1","rudern2","negativ","tischrudern","bandrudern","lhrudern","trxrow","bandlatzug","tuerrudern","lmrow","gorillarow"],
+ antiExt:["deadbug","kneeraise","mcgill","bearcrawl","bergsteiger","halo","kbpullover"],
+ antiRot:["birddog","pallof","renegade","tgu","lmrainbow","gorillarow","pullthrough"],
+ antiLat:["sideplank","suitcase","farmer","copen","windmill","rackcarry","waiter","bucarry","suitcasedl"],
+ neck:["facepull","seitheben","shrug","ytw","serratus","hang","superman","halo"],
  legs:["calf","tibialis","pogo","monster","nordic","slidecurl"],
  mob:["hipflexor","deepsquat","kneewall","hamtuch","figur4","hip9090","schmetterling","wgs","katzekuh","offenesbuch","kindhaltung","tuerrahmen","passthrough","stuhlext"],
  pullBW:["superman","ytw"],
@@ -334,12 +361,12 @@ window.POOLS=Object.assign(window.POOLS,{
 window.STATION_FALLBACK={push:["pushH","pushMix","pushV"],lower:["knee","single","hip","lowerMix"],pull:["pullH","pullMix","pullV","pullBW","neck"],core:["antiExt","antiRot","antiLat"],x5:["neck","legs","mob"],x6:["antiLat","antiRot","antiExt"],x:["neck","legs","mob","antiLat"],x10:["feet","legs","neck"]};
 /* Ersatz je Pool: bleibt in derselben Kategorie (Rumpf bleibt Rumpf, Füße werden nicht zu schweren Beinübungen) */
 window.POOL_FB={pushH:["pushMix","pushV"],pushV:["pushMix","pushH","lmpress"],pushMix:["pushH","pushV","lmpress"],
- pullH:["pullMix","pullV","pullBW","neck","lmrow"],pullV:["pullMix","pullH","pullBW","neck"],pullMix:["pullH","pullV","pullBW","neck","lmrow"],pullBW:["neck"],
+ pullH:["pullMix","pullV","pullBW","neck","lmrow"],pullV:["pullMix","pullH","pullBW","neck"],pullMix:["pullH","pullV","pullBW","neck","lmrow","gorillarow"],pullBW:["neck"],
  knee:["single","lowerMix","hip","lmsquat"],hip:["lowerMix","single","knee","lmslrdl"],single:["knee","lowerMix","hip","lmslrdl"],lowerMix:["knee","hip","single","lmsquat","lmclean"],
- antiExt:["antiRot","antiLat"],antiRot:["antiExt","antiLat","lmrainbow"],antiLat:["antiRot","antiExt"],
- neck:["pullBW","mob"],legs:["feet","hip"],feet:["mob"],mob:["neck"]};
+ antiExt:["antiRot","antiLat","halo","kbpullover"],antiRot:["antiExt","antiLat","lmrainbow","gorillarow","pullthrough"],antiLat:["antiRot","antiExt","windmill","rackcarry","waiter","bucarry","suitcasedl"],
+ neck:["pullBW","mob","halo"],legs:["feet","hip"],feet:["mob"],mob:["neck"]};
 /* Für Einsteiger nur selten vorgeschlagen (schwer oder technisch anspruchsvoll) */
-window.ADVANCED=["lmclean","nordic","archer","tgu","copen","renegade","klimmzug","chinup","dips","pogo"];
+window.ADVANCED=["windmill","lmclean","nordic","archer","tgu","copen","renegade","klimmzug","chinup","dips","pogo"];
 /* Einheiten. Reihenfolge der Stationen = Priorität: kurze Einheiten nehmen die ersten n.
    reg: welche Muskelregion die Einheit hart belastet (für 48 h Erholung). */
 window.SESS_T=[
