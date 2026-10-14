@@ -24,6 +24,7 @@
     const td=dir(a.torso);
     const TL=L.torso*(a.s_torso||1);P.neck=add(P.pelvis,td,TL);
     P.chest=add(P.pelvis,td,TL*0.7);
+    if(a.bend!==undefined){P.chest=add(add(P.pelvis,td,TL*0.55),dir(a.torso+90),a.bend);} // Wirbelsaeulen-Kruemmung: + = Bauchseite, - = Ruecken rund
     P.head=add(P.neck,dir(a.head!==undefined?a.head:a.torso),L.head*(a.s_head||1));
     const perp=dir(a.torso+90);
     const sw=front?19:0, hw=front?8.5:0;
@@ -53,8 +54,9 @@
       let va=A[k],vb=B[k];
       if(va===undefined){const base=k.replace(/[12]$/,'');va=A[base];}
       if(vb===undefined){const base=k.replace(/[12]$/,'');vb=B[base];}
+      if(k==='bend'){out[k]=lerp(va||0,vb||0,u);continue;}
       if(va===undefined)va=k.startsWith('s_')?1:vb; if(vb===undefined)vb=k.startsWith('s_')?1:va;
-      out[k]=k.startsWith('s_')?lerp(va,vb,u):lerpAng(va,vb,u);
+      out[k]=(k.startsWith('s_'))?lerp(va,vb,u):lerpAng(va,vb,u);
     }
     // ensure side keys exist when one frame uses base and other uses split
     return out;
