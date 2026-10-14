@@ -66,9 +66,9 @@
     let tt=((t%total)+total)%total;
     for(let i=0;i<F.length;i++){
       const f=F[i], n=F[(i+1)%F.length], h=f.hold||0, d=f.d||800;
-      if(tt<h) return posed(ex,f,f,0);
+      if(tt<h){const P=posed(ex,f,f,0);P._fi=i;return P;}
       tt-=h;
-      if(tt<d) return posed(ex,f,n,ease(tt/d));
+      if(tt<d){const P=posed(ex,f,n,ease(tt/d));P._fi=i;return P;}
       tt-=d;
     }
     return posed(ex,F[0],F[0],0);
@@ -220,11 +220,11 @@
   function draw(ex,P){
     const front=(ex.view||'side')==='front';
     const hl=ex.hl||[];
-    const props=ex.props||[];
+    const props=(ex.props||[]).filter(p=>!p.on||p.on.includes(P._fi||0)); // on:[Frame-Indizes] = Requisite nur in diesen Frames (inkl. Übergang zum nächsten)
     const HELD=['db','kb','bb','lm'];
     const back=props.filter(p=>!p.layer&&!HELD.includes(p.t)&&!['band','loop','towel','rope'].includes(p.t)||p.layer==='back');
-    const by=j=>props.filter(p=>HELD.includes(p.t)&&(p.j||'ha1').endsWith(j)&&p.layer!=='back'&&p.layer!=='front');
-    const fronts=props.filter(p=>p.layer==='front'||(['band','loop','towel','rope'].includes(p.t)&&!p.layer));
+    const by=j=>props.filter(p=>HELD.includes(p.t)&&typeof (p.j||'ha1')==='string'&&(p.j||'ha1').endsWith(j)&&p.layer!=='back'&&p.layer!=='front');
+    const fronts=props.filter(p=>p.layer==='front'||(['band','loop','towel','rope'].includes(p.t)&&!p.layer)||(HELD.includes(p.t)&&Array.isArray(p.j)&&!p.layer));
     let o='';
     // Schatten
     if(ex.floor!==undefined){const xs=[P.an1[0],P.an2[0],P.pelvis[0]];const cx=(Math.min(...xs)+Math.max(...xs))/2;const w=Math.max(28,(Math.max(...xs)-Math.min(...xs))/2+18);o+=`<ellipse cx="${cx.toFixed(1)}" cy="${(ex.floor+1).toFixed(1)}" rx="${w.toFixed(1)}" ry="4" fill="${C.shadow}"/>`;}
