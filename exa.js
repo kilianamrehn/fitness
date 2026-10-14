@@ -880,3 +880,276 @@ const armTo=(S,H,pick,sd)=>{const s=ik2(S,H,29,26,pick);const k=sd||'';return {[
   props:[{t:'floor',y:FL},{t:'rope',y:FL-6}],
   frames:[M(g(0,140,180),{d:170,hold:40}),M(g(7,134,140),{d:170,hold:30})]};}
 })(window.EXA);
+window.EXA=window.EXA||{};
+(function(E){ const FL=4;
+// Mobilitaet A: Knie-zur-Wand, Beinrueckseite mit Handtuch, Figur 4, 90/90, Schmetterling, World's Greatest Stretch.
+// Posen werden aus Zielpunkten berechnet (IK), Frontansicht-Uebungen ueber ein kleines 3D-Modell mit Projektion.
+const R=Math.PI/180;
+const M=(...o)=>Object.assign({},...o);
+const r1=v=>Math.round(v*10)/10, r2=v=>Math.round(v*100)/100;
+const D=a=>[Math.cos(a*R),Math.sin(a*R)];
+const add=(p,v,s)=>[p[0]+v[0]*(s===undefined?1:s),p[1]+v[1]*(s===undefined?1:s)];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const Ln=v=>Math.hypot(v[0],v[1]), A_=v=>r1(Math.atan2(v[1],v[0])/R);
+const unit=v=>{const l=Ln(v)||1;return [v[0]/l,v[1]/l];};
+const lerp=(a,b,t)=>a+(b-a)*t, lerp2=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t)];
+const cl=v=>Math.max(-1,Math.min(1,v));
+function seg(k,v,L0){const o={};const m=k.match(/[12]$/);const base=k.replace(/[12]$/,'');o[k]=A_(v);o['s_'+base+(m?m[0]:'')]=r2(Math.min(1,Ln(v)/L0));return o;}
+function ik2(p,q,L1,L2,pick){const v=sub(q,p);const d=Math.max(Math.abs(L1-L2)+0.5,Math.min(Ln(v),L1+L2-0.05));const b=Math.atan2(v[1],v[0]);
+ const al=Math.acos(cl((L1*L1+d*d-L2*L2)/(2*L1*d)));
+ const S=[1,-1].map(s=>{const a1=b+s*al;const m=add(p,[Math.cos(a1),Math.sin(a1)],L1);return {m,a1:r1(a1/R),a2:A_(sub(q,m))};});
+ return pick(S[0].m,S[1].m)?S[0]:S[1];}
+const lower=(a,b)=>a[1]>b[1], upper=(a,b)=>a[1]<b[1], fwd=(a,b)=>a[0]>b[0], back=(a,b)=>a[0]<b[0];
+const armTo=(S,H,pick,sd)=>{const s=ik2(S,H,29,26,pick);const k=sd||'';return {['uarm'+k]:s.a1,['farm'+k]:s.a2};};
+const legTo=(Hp,An,pick,sd)=>{const s=ik2(Hp,An,45,43,pick);const k=sd||'';return {['thigh'+k]:s.a1,['shin'+k]:s.a2};};
+
+// ---- kleines 3D-Modell fuer die Frontansicht (x rechts, y hoch, z zur Kamera), Kamera leicht erhoeht ----
+const V={add:(a,b,s)=>[a[0]+b[0]*(s===undefined?1:s),a[1]+b[1]*(s===undefined?1:s),a[2]+b[2]*(s===undefined?1:s)],
+ sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],dot:(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],
+ len:a=>Math.hypot(a[0],a[1],a[2]),cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]};
+V.unit=a=>{const l=V.len(a)||1;return [a[0]/l,a[1]/l,a[2]/l];};
+V.perp=(a,ax)=>V.unit(V.sub(a,V.add([0,0,0],ax,V.dot(a,ax))));
+let EL=18*R; // Kamera-Elevation (pro Uebung gesetzt)
+const PJ=p=>[p[0],FL-p[1]*Math.cos(EL)+p[2]*Math.sin(EL)];
+const seg3=(k,a,b,L0)=>seg(k,sub(PJ(b),PJ(a)),L0);
+// Knie auf dem Kreis um die Achse Huefte->Knoechel; phi=0 Knie oben, phi>0 Richtung +x
+function knee3(Hp,An,phi){const v=V.sub(An,Hp),d=V.len(v),ax=V.unit(v);const a=(45*45-43*43+d*d)/(2*d),r=Math.sqrt(Math.max(0,45*45-a*a));
+ const c=V.add(Hp,ax,a),up=V.perp([0,1,0],ax),w=V.unit(V.cross(up,ax));const ws=w[0]>=0?w:[-w[0],-w[1],-w[2]];
+ return V.add(V.add(c,up,r*Math.cos(phi)),ws,r*Math.sin(phi));}
+function phiFor(Hp,An,y,sgn){let best=0,e=1e9;for(let p=0;p<=Math.PI;p+=0.002){const k=knee3(Hp,An,sgn*p);const q=Math.abs(k[1]-y);if(q<e){e=q;best=sgn*p;}}return best;}
+function ik3(S,H,L1,L2,pole){const v=V.sub(H,S);const d=Math.min(V.len(v),L1+L2-0.05),u=V.unit(v);const a=(L1*L1-L2*L2+d*d)/(2*d),h=Math.sqrt(Math.max(0,L1*L1-a*a));
+ return V.add(V.add(S,u,a),V.perp(pole,u),h);}
+// Rumpf/Kopf/Arme aus 3D: Becken P, Vorneigung lam (Grad, zur Kamera), Seitneigung sd (Grad, +x)
+function upper3(P,lam,sd,hd,hands,pole){const t=V.unit([Math.sin(sd*R),Math.cos(lam*R)*Math.cos(sd*R),Math.sin(lam*R)]);
+ const N=V.add(P,t,50),Hd=V.add(N,V.unit([Math.sin((sd+hd[1])*R),Math.cos((lam+hd[0])*R),Math.sin((lam+hd[0])*R)]),15);
+ const o=M(seg3('torso',P,N,50),seg3('head',N,Hd,15));o.s_torso=Math.max(0.6,o.s_torso);
+ const x=V.unit(V.cross(t,[0,0,1])); // nach -x? korrigieren:
+ const X=x[0]<0?[-x[0],-x[1],-x[2]]:x;
+ [[1,-1],[2,1]].forEach(([s,g])=>{const S=V.add(V.add(P,t,46),X,g*19);const H=hands[s-1];const El=ik3(S,H,29,26,[g*pole[0],pole[1],pole[2]]);
+  Object.assign(o,seg3('uarm'+s,S,El,29),seg3('farm'+s,El,H,26));});
+ return o;}
+
+// ======================= Knie-zur-Wand (Seitenansicht, Blick zur Wand rechts) =======================
+// Vorderer Fuss (nah) flach, Fussspitze eine Handbreit vor der Wand, Ferse bleibt unten. Schienbein kippt nach vorn,
+// bis das Knie die Wand beruehrt. Hinteres Bein Schrittstellung auf dem Fussballen, Haende flach an der Wand.
+{const WX=31, TOE2=[-58,FL-1], HAND=[WX-4.5,-116];
+ const pose=k=>{const sh=lerp(104,123,k),th=lerp(72,40,k),T=lerp(-80,-73,k);
+  const kn=add([0,0],D(sh),-43),hp=add(kn,D(th),-45);
+  const f2=lerp(28,38,k),an2=add(TOE2,D(f2),-14);
+  const o=M({thigh1:r1(th),shin1:r1(sh),foot1:0,foot2:r1(f2),torso:r1(T),head:r1(T+lerp(2,6,k))},legTo(hp,an2,fwd,'2'));
+  const S=add(hp,D(T),46);return M(o,armTo(S,HAND,lower));};
+ E.kneewall={view:'side',floor:FL,hl:['shin'],anchor:{j:'an1',at:[0,0]},
+  props:[{t:'floor',y:FL},{t:'wall',x:WX,y1:-200,y2:FL}],
+  frames:[{a:pose(0),d:550,hold:500},{a:pose(0.5),d:550},{a:pose(1),d:550,hold:1500},{a:pose(0.5),d:550}]};}
+
+// ======================= Beinrueckseite mit Handtuch (Rueckenlage, Kopf links) =======================
+// Fernes Bein angestellt (Fuss flach). Nahes Bein: Knie zur Brust, Tuch um die Fusssohle, dann Bein strecken und
+// bis fast senkrecht ziehen, Knie gestreckt, Fuss angezogen. Haende am Tuch, Arme fast gestreckt.
+{const P=[0,FL-11],SH=add(P,D(180),46);
+ const L2=legTo(P,[50,0],upper,'2');
+ const pose=(th,sh,ft,hl)=>{const kn=add(P,D(th),45),an=add(kn,D(sh),43),to=add(an,D(ft),14);
+  const H=add(SH,unit(sub(lerp2(an,to,0.5),SH)),hl);
+  return M({torso:180,head:180,foot2:0,thigh1:th,shin1:sh,foot1:ft},L2,armTo(SH,H,lower));};
+ E.hamtuch={view:'side',floor:FL,hl:['thigh'],anchor:{j:'pelvis',at:P},
+  props:[{t:'floor',y:FL},{t:'mat',x1:-95,x2:75,y:FL-3},{t:'towel',from:'ha2',to:'to1'},{t:'towel',from:'ha1',to:'to1'}],
+  frames:[{a:pose(-96,-12,-108,52),d:900,hold:600},{a:pose(-52,-50,-148,53),d:900},{a:pose(-77,-77,-176,53),d:300,hold:1300},
+          {a:pose(-79,-79,-178,53),d:400,hold:1200},{a:pose(-60,-40,-136,53),d:800}]};}
+
+// ======================= Figur 4 (Rueckenlage, Kopf links) =======================
+// Beide Fuesse am Boden -> Knoechel des fernen Beins auf das nahe Knie (fernes Knie zeigt nach aussen = von der Kamera
+// weg, Oberschenkel daher verkuerzt) -> nahes Bein vom Boden, Haende greifen hinter den nahen Oberschenkel und ziehen
+// ihn sanft Richtung Brust. Kopf, Schultern und Becken bleiben unten.
+{const P=[0,FL-11],SH=add(P,D(180),46);
+ const fl=legTo(P,[40,0],upper);
+ const cross=(th1,sh1,ft1,kn2,hands,brt)=>{const tdir=D(th1),lf=D(th1-90);
+  const an2=add(add(P,tdir,37),lf,9);const o={torso:180,head:180,thigh1:th1,shin1:sh1,foot1:ft1};
+  Object.assign(o,seg('thigh2',sub(kn2,P),45),seg('shin2',sub(an2,kn2),43));o.foot2=r1(A_(sub(an2,kn2))-20);
+  if(hands){const H=add(add(P,tdir,31+(brt||0)),lf,-7.5);Object.assign(o,armTo(SH,H,lower));}else Object.assign(o,{uarm:2,farm:-2});
+  return o;};
+ const F0=M({torso:180,head:180,uarm:2,farm:-2,foot:0},fl);
+ const F01=M(F0,{thigh2:-82,shin2:12,foot2:-62});
+ const F1=cross(fl.thigh,fl.shin,0,[22,-22],false);
+ const F2=cross(-108,-8,-84,[17,-25],true);
+ const F3=cross(-111,-10,-86,[15,-26],true,-1);
+ E.figur4={view:'side',floor:FL,hl:['thigh'],anchor:{j:'pelvis',at:P},
+  props:[{t:'floor',y:FL},{t:'mat',x1:-95,x2:75,y:FL-3}],
+  frames:[{a:F0,d:600,hold:500},{a:F01,d:600},{a:F1,d:900,hold:500},{a:F2,d:400,hold:1300},{a:F3,d:500,hold:1200},{a:F2,d:900},{a:F1,d:700},{a:F01,d:600}]};}
+
+// ======================= 90/90 Hueftwechsel (Frontansicht, Kamera leicht erhoeht) =======================
+// Sitz, Fuesse weit auseinander, Knie oben. Beide Knie kippen gleichzeitig zur Seite bis auf den Boden
+// (eines aussenrotiert vorn, eines innenrotiert hinten), Oberkoerper aufrecht, dann ueber die Mitte zur anderen Seite.
+{EL=9*R;const PEL=[0,9,0],H1=[-8.5,9,0],H2=[8.5,9,0],A1=[-48,4,40],A2=[48,4,40];
+ const KY=7.5; // Knie liegt auf
+ const pL1=phiFor(H1,A1,KY,-1),pL2=phiFor(H2,A2,KY,-1);
+ const pose=(u,lean)=>{ // u: -1 Knie links unten, 0 Mitte, +1 rechts unten
+  const C1=-0.42,C2=0.42;const ph1=u<0?lerp(C1,pL1,-u):lerp(C1,phiFor(H1,A1,KY,1),u), ph2=u<0?lerp(C2,pL2,-u):lerp(C2,phiFor(H2,A2,KY,1),u);
+  const K1=knee3(H1,A1,ph1),K2=knee3(H2,A2,ph2);
+  const ft=(K,An)=>{const ax=V.unit([An[0]*0.25,0,1]);return V.add(An,ax,14);};
+  const o=M(seg3('thigh1',H1,K1,45),seg3('shin1',K1,A1,43),seg3('foot1',A1,ft(K1,A1),14),
+            seg3('thigh2',H2,K2,45),seg3('shin2',K2,A2,43),seg3('foot2',A2,ft(K2,A2),14));
+  const hx=u*5;
+  return M(o,upper3(PEL,4,lean,[10,lean*1.5],[[-8+hx,46,24],[8+hx,46,24]],[0.6,-1,0]));};
+ const pa=PJ(PEL);
+ E.hip9090={view:'front',floor:FL,hl:['thigh'],anchor:{j:'pelvis',at:pa},
+  props:[{t:'box',x:-100,y:r1(PJ([0,0,-70])[1]),w:200,h:r1(PJ([0,0,75])[1]-PJ([0,0,-70])[1])}],
+  frames:[{a:pose(0,0),d:550,hold:200},{a:pose(-0.55,-2),d:600},{a:pose(-1,-4),d:550,hold:600},{a:pose(-0.55,-2),d:600},
+          {a:pose(0,0),d:550,hold:200},{a:pose(0.55,2),d:600},{a:pose(1,4),d:550,hold:600},{a:pose(0.55,2),d:600}]};}
+
+// ======================= Schmetterling (Frontansicht, sitzend) =======================
+// Fusssohlen aneinander nah am Becken, Haende umfassen die Fuesse, Ellbogen an den Knie-Innenseiten.
+// Knie sinken nach aussen, dann mit langem Ruecken aus der Huefte nach vorn neigen und halten.
+{EL=18*R;const PEL=[0,9,0],H1=[-8.5,9,0],H2=[8.5,9,0],A1=[-4.5,5,33],A2=[4.5,5,33];
+ const pose=(ky,lam,hd)=>{const K1=knee3(H1,A1,phiFor(H1,A1,ky,-1)),K2=knee3(H2,A2,phiFor(H2,A2,ky,1));
+  const ft=An=>V.add(An,V.unit([An[0]>0?-0.15:0.15,-0.1,1]),13);
+  const o=M(seg3('thigh1',H1,K1,45),seg3('shin1',K1,A1,43),seg3('foot1',A1,ft(A1),14),
+            seg3('thigh2',H2,K2,45),seg3('shin2',K2,A2,43),seg3('foot2',A2,ft(A2),14));
+  return M(o,upper3(PEL,lam,0,[hd,0],[[-6,9,39],[6,9,39]],[1.3,-0.6,0]));};
+ const pa=PJ(PEL);
+ E.schmetterling={view:'front',floor:FL,hl:['thigh'],anchor:{j:'pelvis',at:pa},
+  props:[{t:'box',x:-100,y:r1(PJ([0,0,-70])[1]),w:200,h:r1(PJ([0,0,75])[1]-PJ([0,0,-70])[1])}],
+  frames:[{a:pose(30,12,8),d:900,hold:700},{a:pose(21,22,14),d:900},{a:pose(16,30,18),d:500,hold:1300},{a:pose(15,32,19),d:600,hold:1300},{a:pose(22,20,12),d:900}]};}
+
+// ======================= World's Greatest Stretch (Seitenansicht, Blick rechts) =======================
+// Tiefer Ausfallschritt, vorderes (nahes) Bein: Knie ueber dem Fuss, Oberschenkel fast waagerecht; hinteres Bein lang
+// auf dem Fussballen. Rumpf schraeg nach vorn-unten innen neben dem vorderen Oberschenkel, Haende innen neben dem Fuss.
+// Naher Ellbogen sinkt zur Fussinnenseite, Hand zurueck, dann denselben Arm gestreckt zur Decke aufdrehen (Arm schwenkt
+// zur Kamera = verkuerzt), Kopf folgt. Ferne Hand bleibt als Stuetze am Boden.
+{const SH1=100,TH1=8;const kn=add([0,0],D(SH1),-43),HP=add(kn,D(TH1),-45);
+ let best=null;{let e=1e9;for(let t=150;t<=172;t+=0.1){const an=add(HP,D(t),87.5);const f=t-95;const to=add(an,D(f),14);const q=Math.abs(to[1]-(FL-1));if(q<e){e=q;best={t,an,f};}}}
+ const LEG=M({thigh1:TH1,shin1:SH1,foot1:0},legTo(HP,best.an,upper,'2'),{foot2:r1(best.f)});
+ const HF1=[6,0],HF2=[11,0];
+ const S_=T=>add(HP,D(T),46);
+ const P0=M(LEG,{torso:-6,head:4},armTo(S_(-6),HF1,back,'1'),armTo(S_(-6),HF2,back,'2'));
+ const P1=(()=>{const T=18,S=S_(T),El=[2,-6];return M(LEG,{torso:T,head:T+8},seg('uarm1',sub(El,S),29),{farm1:2,s_farm1:0.8},armTo(S,HF2,back,'2'));})();
+ const P2=M(LEG,{torso:-8,head:-24,uarm1:20,s_uarm1:0.35,farm1:0,s_farm1:0.35},armTo(S_(-8),HF2,back,'2'));
+ const P3=M(LEG,{torso:-10,head:-40,uarm1:-99,farm1:-99},armTo(S_(-10),HF2,back,'2'));
+ const P3b=M(P3,{torso:-11,head:-43,uarm1:-100,farm1:-100},armTo(S_(-11),HF2,back,'2'));
+ E.wgs={view:'side',floor:FL,hl:['thigh'],anchor:{j:'an1',at:[0,0]},
+  props:[{t:'floor',y:FL}],
+  frames:[{a:P0,d:900,hold:500},{a:P1,d:800,hold:1000},{a:P0,d:500,hold:200},{a:P2,d:450},{a:P3,d:300,hold:800},{a:P3b,d:300,hold:400},{a:P2,d:450}]};}
+})(window.EXA);
+window.EXA=window.EXA||{};
+(function(E){ const FL=4;
+// Mobility B: Katze-Kuh, Offenes Buch, Kindhaltung, Tuerrahmen-Dehnung, Pass-Through, BWS-Extension am Stuhl.
+// Posen werden aus Zielpunkten berechnet (gleiches Skelett wie anim.js).
+const R=Math.PI/180;
+const M=(...o)=>Object.assign({},...o);
+const r1=v=>Math.round(v*10)/10, r2=v=>Math.round(v*100)/100;
+const D=a=>[Math.cos(a*R),Math.sin(a*R)];
+const add=(p,v,s)=>[p[0]+v[0]*(s===undefined?1:s),p[1]+v[1]*(s===undefined?1:s)];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const Ln=v=>Math.hypot(v[0],v[1]), A_=v=>r1(Math.atan2(v[1],v[0])/R);
+const unit=v=>{const l=Ln(v)||1;return [v[0]/l,v[1]/l];};
+const lerp=(a,b,t)=>a+(b-a)*t, lerp2=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t)];
+const cl=v=>Math.max(-1,Math.min(1,v));
+function seg(k,v,L0){const o={};const m=k.match(/[12]$/);const base=k.replace(/[12]$/,'');o[k]=A_(v);o['s_'+base+(m?m[0]:'')]=r2(Math.min(1,Ln(v)/L0));return o;}
+function ik2(p,q,L1,L2,pick){const v=sub(q,p);const d=Math.max(Math.abs(L1-L2)+0.5,Math.min(Ln(v),L1+L2-0.05));const b=Math.atan2(v[1],v[0]);
+ const al=Math.acos(cl((L1*L1+d*d-L2*L2)/(2*L1*d)));
+ const S=[1,-1].map(s=>{const a1=b+s*al;const m=add(p,[Math.cos(a1),Math.sin(a1)],L1);return {m,a1:r1(a1/R),a2:A_(sub(q,m))};});
+ return pick(S[0].m,S[1].m)?S[0]:S[1];}
+const lower=(a,b)=>a[1]>b[1], upper=(a,b)=>a[1]<b[1], fwd=(a,b)=>a[0]>b[0], back=(a,b)=>a[0]<b[0];
+const shOf=(pel,t)=>add(pel,D(t),46);
+const armTo=(S,H,pick,sd)=>{const s=ik2(S,H,29,26,pick);const k=sd||'';return {['uarm'+k]:s.a1,['farm'+k]:s.a2};};
+const legTo=(P,A,pick,sd)=>{const s=ik2(P,A,45,43,pick);const k=sd||'';return {['thigh'+k]:s.a1,['shin'+k]:s.a2};};
+// Winkel t so, dass Abstand Punkt(t) -> Z = L (Bisektion ueber t-Bereich)
+function solveT(f,Z,L,t0,t1){let best=t0,e=1e9;for(let t=t0;t<=t1;t+=0.05){const q=Math.abs(Ln(sub(f(t),Z))-L);if(q<e){e=q;best=t;}}return best;}
+
+// ---------- Katze-Kuh ----------
+// Vierfuesslerstand, Kopf rechts. Haende unter den Schultern, Knie unter der Huefte, beide fix (Anker Knie + Pin Hand).
+// Arme gestreckt. Katze: Rumpf/Schultern hoch (Schulterblaetter auseinander), Becken eingerollt, Kopf haengt, Kinn zur Brust.
+// Kuh: Schultern sinken zwischen die Schulterblaetter, Rumpf flacher, Becken gekippt, Blick nach vorn.
+{const K=[0,FL-6],H=[45.4,FL-4];
+ const pose=(th,sArm,head)=>{const P=sub(K,add([0,0],D(th),45));const L=54.6*sArm;
+  const t=solveT(t=>shOf(P,t),H,L,-30,10);const S=shOf(P,t);const a=A_(sub(H,S));
+  return {torso:r1(t),head,thigh:th,shin:178,foot:180,uarm:a,farm:a,s_uarm:r2(sArm),s_farm:r2(sArm)};};
+ const N=M(pose(90,1,-12),{bend:0}),CAT=M(pose(95,1.06,122),{bend:-12}),CAT2=M(pose(95,1.065,124),{bend:-12.5}),COW=M(pose(85,0.92,-52),{bend:8}),COW2=M(pose(85,0.915,-54),{bend:8.3});
+ E.katzekuh={view:'side',floor:FL,hl:['torso'],anchor:{j:'kn1',at:K},pin:{j:'ha1',y:FL-4},
+  props:[{t:'floor',y:FL},{t:'mat',x1:-70,x2:80,y:FL-3}],
+  frames:[{a:N,d:1300,hold:150},{a:CAT,d:500,hold:600},{a:CAT2,d:1300},{a:N,d:1300,hold:150},{a:COW,d:500,hold:600},{a:COW2,d:1300}]};}
+
+// ---------- Kindhaltung ----------
+// Fersensitz (Gesaess auf den Fersen, Fussruecken flach), Haende auf den Oberschenkeln. Haende wandern am Boden nach vorn,
+// Rumpf legt sich auf die Oberschenkel, Stirn Richtung Boden, Arme lang. Gesaess bleibt auf den Fersen. Halten, zurueck.
+{const K=[0,FL-6],TH=21,P=sub(K,add([0,0],D(TH),45));
+ const base={thigh:TH,shin:180,foot:180};
+ const onThigh=add(add(P,D(TH),30),D(TH-90),9);
+ const pose=(t,h,H,pick)=>{const S=shOf(P,t);return M(base,{torso:r1(t),head:r1(h)},armTo(S,H,pick||lower));};
+ // Hand am Boden mit fast gestrecktem Arm (Reichweite rr)
+ const fl=(t,h,rr)=>{const S=shOf(P,t);const y=FL-4;const x=S[0]+Math.sqrt(Math.max(0,rr*rr-(y-S[1])**2));return pose(t,h,[x,y],upper);};
+ const k0=pose(-86,-88,onThigh,fwd);
+ const k1=fl(-40,-38,53.5), k2=fl(-27,-22,54), k3=fl(-14,-6,54.2), k4=fl(-2,6,54.4), k5=fl(9,11,54.5), k6=fl(10.5,10.5,54.5);
+ E.kindhaltung={view:'side',floor:FL,hl:['torso','uarm'],anchor:{j:'kn1',at:K},
+  props:[{t:'floor',y:FL},{t:'mat',x1:-75,x2:90,y:FL-3}],
+  frames:[{a:k0,d:800,hold:500},{a:k1,d:500},{a:k2,d:500},{a:k3,d:500},{a:k4,d:700},{a:k5,d:1200,hold:1000},{a:k6,d:1200,hold:800},
+          {a:k4,d:600},{a:k3,d:500},{a:k2,d:500},{a:k1,d:700}]};}
+
+// ---------- Tuerrahmen-Dehnung (beidseitig) ----------
+// Seitenansicht, Blick rechts, Tuerrahmen schraeg gesehen (vorderer Pfosten = Kontaktflaeche, hinterer Pfosten + Sturz).
+// Ellbogen knapp ueber Schulterhoehe, Unterarme senkrecht am Rahmen (Ellbogen + Haende fix). Schritt durch die Tuer,
+// Koerper als Linie nach vorn: Schultern/Brust deutlich vor dem Rahmen, Oberarme zeigen nach hinten zum Rahmen.
+{const PX=-3,EL=[PX,-141],HA=[PX,-167];
+ const st=(P,t,A1,lift)=>{const S=shOf(P,t);
+  const o=M({torso:r1(t),head:r1(t-2),foot:0},legTo(P,[0,0],fwd,'2'));
+  if(lift){Object.assign(o,{thigh1:lift[0],shin1:lift[1],foot1:lift[2]});}else Object.assign(o,legTo(P,A1,fwd,'1'));
+  Object.assign(o,seg('uarm',sub(EL,S),29),seg('farm',sub(HA,EL),26));o.s_uarm=Math.max(o.s_uarm,0.15);return o;};
+ const Pfor=(S,t)=>sub(S,add([0,0],D(t),46));
+ const a0=st([0,-88],-90,[0,0]);
+ const a1=st([2,-88.3],-89,null,[64,114,8]);
+ const t2=-76,a2=st(Pfor([PX+24,-127],t2),t2,[44,0]);
+ const a3=st(Pfor([PX+25.5,-126.7],t2+0.6),t2+0.6,[44,0]);
+ E.tuerrahmen={view:'side',floor:FL,hl:['uarm','torso'],anchor:{j:'an2',at:[0,0]},
+  props:[{t:'floor',y:FL},{t:'box',x:PX-36,y:-206,w:7,h:202},{t:'box',x:PX-36,y:-216,w:42,h:10},{t:'box',x:PX-5,y:-216,w:10,h:216+FL}],
+  frames:[{a:a0,d:600,hold:500},{a:a1,d:700},{a:a2,d:1300,hold:1000},{a:a3,d:1500,hold:800},{a:a2,d:900},{a:a1,d:600}]};}
+
+// ---------- Pass-Through mit Stab ----------
+// Aufrecht, Stab weit gegriffen, Arme gestreckt. Arme heben vorn ueber den Kopf und weiter nach hinten bis hinter das
+// Gesaess, dann denselben Weg zurueck. Rumpf bleibt senkrecht. Zwischen-Keyframes erzwingen den Weg ueber oben.
+{const base={torso:-90,head:-90,thigh:90,shin:90,foot:0,s_uarm:0.82,s_farm:0.82};
+ const ar=(a)=>M(base,{uarm:a,farm:a,uarm2:a-11,farm2:a-11});
+ E.passthrough={view:'side',floor:FL,hl:['uarm'],anchor:{j:'an1',at:[0,0]},
+  props:[{t:'floor',y:FL},{t:'towel',from:'ha1',to:'ha2'}],
+  frames:[{a:ar(74),d:1400,hold:300},{a:ar(-100),d:1300,hold:150},{a:ar(116),d:1300,hold:400},{a:ar(-100),d:1400,hold:150}]};}
+
+// ---------- BWS-Extension am Stuhl (kniend) ----------
+// Kniestand auf der Matte (Zehen aufgestellt wie im Video), Stuhl rechts, Lehne auf der abgewandten Seite.
+// Start: Haende an der Sitzkante, Rumpf vorgeneigt. Dann Ellbogen auf die Sitzflaeche, Gesaess nach hinten Richtung Fersen,
+// Brustkorb sinkt unter Ellbogenhoehe, Kopf zwischen den Armen. Halten, zurueck.
+{const K=[0,FL-6],SY=-47,SX=35,SW=44;
+ const base={shin:192,foot:112};
+ const P_=th=>sub(K,add([0,0],D(th),45));
+ const pose=(th,t,h,El,Hd)=>{const P=P_(th),S=shOf(P,t);const o=M(base,{thigh:th,torso:r1(t),head:r1(h)});
+  if(El){Object.assign(o,seg('uarm',sub(El,S),29),seg('farm',sub(Hd,El),26));}else Object.assign(o,armTo(S,Hd,lower));return o;};
+ // Ellbogen auf dem Sitz: Ellbogenpunkt so, dass Oberarm 29 lang ist
+ const elb=(th,t)=>{const S=shOf(P_(th),t);const y=SY-4.5;const dx=Math.sqrt(Math.max(0,29*29-(y-S[1])**2));return [S[0]+dx,y];};
+ const hEdge=[SX+4,SY-4];
+ const EF=[SX+4,SY-4.5];
+ // Pose aus Schulterpunkt S (Knie fix): Becken = Schnitt der Kreise (K,45) und (S,46), Huefte oben
+ const fromS=S=>{const v=sub(S,K),d=Ln(v),a=(45*45-46*46+d*d)/(2*d),h=Math.sqrt(Math.max(0,45*45-a*a)),u=unit(v),n=[u[1],-u[0]];
+   let P=add(add(K,u,a),n,h);const P2=add(add(K,u,a),n,-h);if(P2[1]<P[1])P=P2;return {th:A_(sub(K,P)),t:A_(sub(S,P))};};
+ const viaS=(S,dh,El,Hd)=>{const q=fromS(S);return pose(q.th,q.t,q.t+dh,El,Hd);};
+ const HS=[EF[0]+25.5,SY-4.5];
+ const k0=pose(72,-58,-60,null,hEdge);
+ const k1=pose(66,-40,-42,null,[SX+10,SY-4]);
+ const E1b=[SX+4,SY-11],k1b=viaS(add(E1b,D(200),29),-4,E1b,[SX+28,SY-4.5]);
+ const k2=viaS(add(EF,D(178),29),0,EF,HS);
+ const k3=viaS(add(EF,D(150),29),16,EF,HS);
+ const k4=viaS(add(EF,D(147),29),17,EF,HS);
+ E.stuhlext={view:'side',floor:FL,hl:['torso'],anchor:{j:'kn1',at:K},
+  props:[{t:'floor',y:FL},{t:'mat',x1:-75,x2:30,y:FL-3},{t:'bench',x:SX,y:SY,w:SW,h:-SY+FL},{t:'post',x:SX+SW-3,y1:SY-58,y2:SY}],
+  frames:[{a:k0,d:600,hold:500},{a:k1,d:500},{a:k1b,d:500},{a:k2,d:900},{a:k3,d:1000,hold:900},{a:k4,d:1000,hold:900},{a:k2,d:800},{a:k1b,d:500},{a:k1,d:600}]};}
+// ---------- Offenes Buch (Draufsicht wie im Video: Kamera am Kopfende schraeg von oben) ----------
+// Seitenlage, Kopf unten im Bild auf dem Kissen, Rumpf nach oben, Huefte und Knie je 90 Grad (Oberschenkel nach rechts = vorn,
+// Schienbeine nach oben), Knie bleiben aufeinander. Unterer Arm liegt gestreckt nach vorn (rechts). Oberer Arm (nah, dunkel)
+// startet auf dem unteren, macht einen grossen Bogen ueber die Decke (Richtung Kamera = verkuerzt, Projektion nach oben)
+// und landet hinter dem Koerper (links) Richtung Boden. Blick folgt der Hand.
+{const KY=0.42; // Schraegsicht: senkrechte Richtung erscheint im Bild verkuerzt nach oben
+ const armV=ph=>[55*Math.cos(ph*R),-55*KY*Math.sin(ph*R)];
+ const base={torso:90,thigh:0,thigh2:5,s_thigh:0.95,shin:-90,shin2:-88,s_shin:0.9,foot:-100,s_foot:0.7,uarm2:-2,farm2:0};
+ const hR={head:-90,s_head:-1}, hL={head:90,s_head:1};
+ const f=(ph,hd)=>{const v=armV(ph);const a=A_(v),sc=r2(Math.max(0.12,Ln(v)/55));return M(base,hd,{uarm1:a,farm1:a,s_uarm1:sc,s_farm1:sc});};
+ E.offenesbuch={view:'side',hl:['torso'],anchor:{j:'pelvis',at:[0,0]},
+  props:[{t:'box',x:-26,y:44,w:52,h:34}],
+  // Kopf: Blickpunkt wechselt in dem Moment, in dem der Arm senkrecht steht (Gesicht zur Decke), ohne Zwischenpose (d sehr kurz)
+  frames:[{a:f(2,hR),d:900,hold:500},{a:f(50,hR),d:650},{a:f(92,hR),d:0.01},{a:f(92,hL),d:650},{a:f(135,hL),d:800},
+          {a:f(176,hL),d:1200,hold:1000},{a:f(172,hL),d:1100,hold:700},{a:f(135,hL),d:650},{a:f(92,hL),d:0.01},{a:f(92,hR),d:650},{a:f(50,hR),d:800}]};}
+})(window.EXA);
