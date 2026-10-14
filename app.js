@@ -658,7 +658,7 @@ function stepEx(st){
     <div class="pl-cues">${x.c.map(c=>`<div>· ${esc(c)}</div>`).join('')}${x.e?`<div class="pl-warn">Achtung: ${esc(x.e)}</div>`:''}</div>
     <div class="pl-tools"><button class="th up ${rateOf(id)===1?'on':''}" data-rate="1" data-id="${id}">${I.up}</button><button class="th down ${rateOf(id)===-1?'on':''}" data-rate="-1" data-id="${id}">${I.down}</button><button id="swp">${I.swap} Tauschen</button><button id="skp">${I.skip} Überspringen</button><button id="inf">${I.info}</button></div>`,
    (time?`<div class="timer"><button class="iconbtn" id="tm">−</button><div class="tring" id="tr">${ringT(1)}<b id="tv">${mmss(P.val)}</b></div><button class="iconbtn" id="tp">+</button>${x.side?'<div class="tside" id="tsd">Seite 1</div>':''}</div>`
-         :`${loadSrc(id)?`<div class="kgrow" id="kgrow"><span class="kgl">${loadSrc(id)==='bb'?'kg gesamt':loadSrc(id)==='lm'?'kg Scheiben':x.n2?'kg je Hantel':'kg'}</span><div class="kgch">${kgChips(weights(id),P.kg)}</div></div>`:''}
+         :`${loadSrc(id)?`<div class="kgrow" id="kgrow"><span class="kgl">${loadSrc(id)==='bb'?'kg gesamt':loadSrc(id)==='lm'?'kg':x.n2?'kg je Hantel':'kg'}</span><div class="kgch">${kgChips(weights(id),P.kg)}</div></div>`:''}
            <div class="logger"><div class="step"><button id="vm">−</button><div class="val"><b id="vv">${P.val}</b><span>Wdh${x.side?' / Seite':''}</span></div><button id="vp">+</button></div></div>`)+
     `${setGrid(id,st)}
      <button class="bigbtn" id="done">${time?I.play+' Start':I.check+' Satz fertig'}</button>`);

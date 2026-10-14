@@ -1153,3 +1153,386 @@ function solveT(f,Z,L,t0,t1){let best=t0,e=1e9;for(let t=t0;t<=t1;t+=0.05){const
   frames:[{a:f(2,hR),d:900,hold:500},{a:f(50,hR),d:650},{a:f(92,hR),d:0.01},{a:f(92,hL),d:650},{a:f(135,hL),d:800},
           {a:f(176,hL),d:1200,hold:1000},{a:f(172,hL),d:1100,hold:700},{a:f(135,hL),d:650},{a:f(92,hL),d:0.01},{a:f(92,hR),d:650},{a:f(50,hR),d:800}]};}
 })(window.EXA);
+window.EXA=window.EXA||{};
+(function(E){ const FL=4;
+// Landmine-Uebungen. Die Stange ist starr und dreht um den Punkt am Boden: die Hand liegt immer auf einem Kreis
+// (Radius BAR) um den Drehpunkt. Erst werden die Handziele auf diesem Kreis bestimmt, dann der Koerper per IK darum.
+const R=Math.PI/180;
+const M=(...o)=>Object.assign({},...o);
+const r1=v=>Math.round(v*10)/10, r2=v=>Math.round(v*100)/100;
+const D=a=>[Math.cos(a*R),Math.sin(a*R)];
+const add=(p,v,s)=>[p[0]+v[0]*(s===undefined?1:s),p[1]+v[1]*(s===undefined?1:s)];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const Ln=v=>Math.hypot(v[0],v[1]), A_=v=>r1(Math.atan2(v[1],v[0])/R);
+const unit=v=>{const l=Ln(v)||1;return [v[0]/l,v[1]/l];};
+const lerp=(a,b,t)=>a+(b-a)*t, lerp2=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t)];
+const cl=v=>Math.max(-1,Math.min(1,v));
+function seg(k,v,L0){const o={};const m=k.match(/[12]$/);const base=k.replace(/[12]$/,'');o[k]=A_(v);o['s_'+base+(m?m[0]:'')]=r2(Math.min(1,Ln(v)/L0));return o;}
+function ik2(p,q,L1,L2,pick){const v=sub(q,p);const d=Math.max(Math.abs(L1-L2)+0.5,Math.min(Ln(v),L1+L2-0.05));const b=Math.atan2(v[1],v[0]);
+ const al=Math.acos(cl((L1*L1+d*d-L2*L2)/(2*L1*d)));
+ const S=[1,-1].map(s=>{const a1=b+s*al;const m=add(p,[Math.cos(a1),Math.sin(a1)],L1);return {m,a1:r1(a1/R),a2:A_(sub(q,m))};});
+ return pick(S[0].m,S[1].m)?S[0]:S[1];}
+const lower=(a,b)=>a[1]>b[1], fwd=(a,b)=>a[0]>b[0], back=(a,b)=>a[0]<b[0], upper=(a,b)=>a[1]<b[1];
+const hipOf=(an,th,sh)=>add(add(an,D(sh),-43),D(th),-45);
+const shOf=(pel,t)=>add(pel,D(t),46);
+// Ellbogen-Loesung waehlen: Seitenansicht Blick rechts -> Beugung = Unterarm dreht gegen den Uhrzeigersinn (farm-uarm in (-180,0))
+const flexOK=(m0,m1,S,H)=>{const f=m=>{const u=Math.atan2(m[1]-S[1],m[0]-S[0]),v=Math.atan2(H[1]-m[1],H[0]-m[0]);let d=(v-u)/R;d=((d%360)+540)%360-180;return d<=0;};return f(m0);};
+const armTo=(S,H,pick,sd)=>{const s=ik2(S,H,29,26,(m0,m1)=>flexOK(m0,m1,S,H));const k=sd||'';return {['uarm'+k]:s.a1,['farm'+k]:s.a2};};
+const legTo=(pel,an,sd)=>{const s=ik2(pel,an,45,43,fwd);return {['thigh'+sd]:s.a1,['shin'+sd]:s.a2};};
+const toeAn=(toe,ft)=>add(toe,D(ft),-14);           // Knoechel aus fixer Zehe + Fusswinkel (Ferse hebt ab)
+const PY=FL-2;                                        // Hoehe des Drehpunkts
+function cc(A,ra,B,rb){const v=sub(B,A),d=Ln(v),a=(ra*ra-rb*rb+d*d)/(2*d),h=Math.sqrt(Math.max(0,ra*ra-a*a)),u=unit(v),p=[-u[1],u[0]];const m=add(A,u,a);return [add(m,p,h),add(m,p,-h)];}
+const onC=(PV,BAR,y,s)=>[PV[0]+s*Math.sqrt(Math.max(0,BAR*BAR-(PV[1]-y)*(PV[1]-y))),y]; // Punkt auf dem Stangenkreis in Hoehe y (s=-1: Hand links vom Drehpunkt)
+const angOn=(PV,H)=>Math.atan2(H[1]-PV[1],H[0]-PV[0]);
+const onAng=(PV,BAR,a)=>[PV[0]+BAR*Math.cos(a),PV[1]+BAR*Math.sin(a)];
+// Vorwaertskinematik Seitenansicht (fuer Schwerpunkt), Becken bei pel
+const SEGW={torso:.5,head:.08,uarm:.028,farm:.022,thigh:.1,shin:.045,foot:.015};
+function comX(pel,a,load,loadAt){const g=(k,s)=>a[k+s]!==undefined?a[k+s]:a[k];let cx=0,m=0;const ad=(p,w)=>{cx+=p[0]*w;m+=w;};
+ const nk=add(pel,D(a.torso),50);ad(lerp2(pel,nk,0.5),SEGW.torso);ad(add(nk,D(a.head),15),SEGW.head);const S=shOf(pel,a.torso);
+ for(const s of ['1','2']){const e=add(S,D(g('uarm',s)),29),h=add(e,D(g('farm',s)),26),k=add(pel,D(g('thigh',s)),45),n=add(k,D(g('shin',s)),43);
+  ad(lerp2(S,e,.5),SEGW.uarm);ad(lerp2(e,h,.5),SEGW.farm);ad(lerp2(pel,k,.5),SEGW.thigh);ad(lerp2(k,n,.5),SEGW.shin);}
+ if(load)ad(loadAt,load);return cx/m;}
+
+// ---------- Landmine-Kniebeuge ----------
+// Seitenansicht, Drehpunkt rechts vorn am Boden. Haende umfassen das Stangenende vor dem Brustbein, Ellbogen tief
+// vor dem Rumpf (wie Goblet). Knie wandern nach vorn, Fersen bleiben unten, Tiefe bis Oberschenkel parallel.
+// Die Rumpfneigung wird pro Tiefe so geloest, dass das Stangenende auf dem Kreis um den Drehpunkt bleibt
+// (die Hand wandert beim Absenken etwas nach hinten-unten, der Rumpf bleibt aufrechter als bei der Rueckenkniebeuge).
+{const BAR=200;const HT=(pel,T)=>add(add(pel,D(T),39),D(T+90),16);
+ const lg=k=>({th:lerp(92,5,k),sh:lerp(97,126,k)});
+ // Drehpunkt aus der tiefsten Position (Rumpf ~ -66 Grad, Schwerpunkt ueber dem Fuss); oben lehnt der Koerper dann
+ // gerade so weit in die Stange, wie der Kreis es verlangt (wie im Video, ca. 8-10 Grad).
+ const PB=hipOf([0,0],5,126),HB=HT(PB,-69);const PV=[HB[0]+Math.sqrt(BAR*BAR-(PY-HB[1])**2),PY];
+ const pose=k=>{const {th,sh}=lg(k);const P=hipOf([0,0],th,sh);let T=-80,best=1e9;
+  for(let t=-100;t<=-45;t+=0.05){const q=Math.abs(Ln(sub(HT(P,t),PV))-BAR);if(q<best){best=q;T=t;}}
+  const S=shOf(P,T),H=HT(P,T);
+  return M({torso:r1(T),head:r1(T+(-86-T)*0.6),thigh:r1(th),shin:r1(sh),foot:0},armTo(S,H,lower));};
+ E.lmsquat={view:'side',floor:FL,hl:['thigh'],anchor:{j:'an1',at:[0,0]},
+  props:[{t:'floor',y:FL},{t:'lm',from:PV,j:'ha1',over:3,plate:15,s:1.15}],
+  frames:[{a:pose(0),d:700,hold:300},{a:pose(0.35),d:500},{a:pose(0.7),d:500},{a:pose(1),d:550,hold:250},{a:pose(0.7),d:450},{a:pose(0.35),d:500}]};}
+
+// ---------- Einarmiges Landmine-Push-Press ----------
+// Seitenansicht Blick rechts, Drehpunkt rechts vorn. Versetzter Stand: nahes Bein (Druckseite) hinten, Ferse leicht hoch.
+// Start: Stangenende vor der nahen Schulter, Ellbogen tief vor dem Rumpf. Kurzer Dip (Rumpf aufrecht), explosive
+// Streckung, Arm drueckt entlang des Stangenkreises nach vorn-oben bis gestreckt, Oberkoerper lehnt leicht in die Stange.
+// Zwischenposen werden entlang des Kreises abgetastet, damit die Hand nie vom Kreis abweicht.
+{const BAR=198;const AN2=[0,0],TOE1=[-28,0],FT1=22,AN1=toeAn(TOE1,FT1);
+ const rack=(P,T)=>add(add(shOf(P,T),D(T),-9),D(T+90),8);
+ const B={st:{p:[-16,-84.5],T:-88,hd:-88},dip:{p:[-15,-75],T:-88,hd:-88},lo:{p:[-6,-86.5],T:-74,hd:-84}};
+ const H0=rack(B.st.p,B.st.T);const PV=[H0[0]+Math.sqrt(BAR*BAR-(PY-H0[1])**2),PY];
+ // Dip: Stange bleibt auf der Schulter -> Koerper weicht so weit nach hinten aus, wie der Kreis es verlangt
+ {let bx=B.dip.p[0],e=1e9;for(let x=-15;x>=-30;x-=0.05){const q=Math.abs(Ln(sub(rack([x,B.dip.p[1]],B.dip.T),PV))-BAR);if(q<e){e=q;bx=x;}}B.dip.p[0]=bx;}
+ const base=(p,T)=>M(legTo(p,AN2,'2'),legTo(p,AN1,'1'),{foot2:0,foot1:FT1,torso:r1(T),uarm2:94,farm2:84});
+ const aH=b=>angOn(PV,b===B.lo?cc(shOf(b.p,b.T),54.2,PV,BAR).sort((x,y)=>x[1]-y[1])[0]:onC(PV,BAR,rack(b.p,b.T)[1],-1));
+ const mk=(b0,b1,u)=>{const p=lerp2(b0.p,b1.p,u),T=lerp(b0.T,b1.T,u);const H=onAng(PV,BAR,lerp(aH(b0),aH(b1),u));const S=shOf(p,T);
+   return M(base(p,T),{head:r1(lerp(b0.hd,b1.hd,u))},armTo(S,H,lower,'1'));};
+ const fr=[{a:mk(B.st,B.st,0),d:330,hold:350},{a:mk(B.dip,B.dip,0),d:100,hold:60}];
+ for(const u of [0.25,0.5,0.75])fr.push({a:mk(B.dip,B.lo,u),d:80});
+ fr.push({a:mk(B.lo,B.lo,0),d:250,hold:350});
+ for(const u of [0.2,0.4,0.6,0.8])fr.push({a:mk(B.lo,B.st,u),d:250});
+ fr[fr.length-1].d=250;
+ E.lmpress={view:'side',floor:FL,hl:['uarm','farm'],anchor:{j:'an2',at:AN2},
+  props:[{t:'floor',y:FL},{t:'lm',from:PV,j:'ha1',over:6,plate:16,s:1}],
+  frames:fr};}
+
+// ---------- Einarmiges Landmine-Rudern im Ausfallschritt ----------
+// Seitenansicht Blick rechts, Drehpunkt hinten-links am Boden. Lange Schrittstellung: fernes Bein vorn (Knie gebeugt),
+// nahes Bein hinten lang, Ferse hoch. Rumpf ~45 Grad vorgeneigt und fix, freie (ferne) Hand stuetzt auf dem vorderen
+// Oberschenkel. Nahe Hand am Stangenende unter der Schulter; Zug: Ellbogen eng nach hinten-oben, Hand zur Huefte.
+// Auf dem Kreis um den hinteren Drehpunkt wandert die Hand beim Hochziehen automatisch etwas nach hinten.
+{const BAR=185;const AN2=[0,0],TOE1=[-82,0],FT1=30,AN1=toeAn(TOE1,FT1);
+ const P=[-33,-66],T=-42;const S=shOf(P,T);
+ const H0=add(S,D(92),53.5);const PV=[H0[0]-Math.sqrt(BAR*BAR-(PY-H0[1])**2),PY];
+ const TP=add(add(P,D(T),19),D(T+90),10);
+ const L2=legTo(P,AN2,'2');const K2=add(P,D(L2.thigh2),45);
+ const FH=add(lerp2(P,K2,0.8),D(L2.thigh2-90),6.5);
+ const L={torso:T,head:-34,foot2:0,foot1:FT1};
+ const pose=k=>{const H=onC(PV,BAR,lerp(H0[1],TP[1],k),1);return M(L,L2,legTo(P,AN1,'1'),armTo(S,H,back,'1'),armTo(S,FH,back,'2'));};
+ E.lmrow={view:'side',floor:FL,hl:['uarm','torso'],anchor:{j:'an2',at:AN2},
+  props:[{t:'floor',y:FL},{t:'lm',from:PV,j:'ha1',over:8,plate:16,s:1}],
+  frames:[{a:pose(0),d:330,hold:300},{a:pose(0.35),d:270},{a:pose(0.7),d:300},{a:pose(1),d:550,hold:350},{a:pose(0.7),d:450},{a:pose(0.35),d:450}]};}
+
+// ---------- Einbeiniges Landmine-RDL ----------
+// Seitenansicht Blick rechts, Drehpunkt hinten-links am Boden. Standbein = fernes Bein (leicht gebeugt), freies Bein =
+// nahes Bein; nahe Hand haelt das Stangenende, Arm haengt senkrecht. Hinge bis Rumpf fast waagerecht, freies Bein
+// gestreckt in Verlaengerung des Rumpfs. Huefte wird pro Pose so weit nach hinten geschoben, dass der Schwerpunkt
+// (inkl. Lastanteil an der Hand) ueber dem Mittelfuss bleibt.
+{const BAR=185;const AN2=[0,0];
+ const body=(k,th)=>{const T=lerp(-87,-9,k),sh=lerp(91,99,k);const P=hipOf(AN2,th,sh);
+   const t1=lerp(99,T+180,k),s1=lerp(118,T+180,Math.min(1,k*1.25)),f1=lerp(12,T+95,k);
+   return {P,T,a:{torso:r1(T),head:r1(T+lerp(-2,-9,k)),thigh2:r1(th),shin2:r1(sh),foot2:0,thigh1:r1(t1),shin1:r1(s1),foot1:r1(f1),uarm2:84,farm2:82}};};
+ // Drehpunkt aus der Standposition (Arm haengt senkrecht)
+ const b0=body(0,90);const S0=shOf(b0.P,b0.T);const H0=add(S0,[0.5,54]);const PV=[H0[0]-Math.sqrt(BAR*BAR-(PY-H0[1])**2),PY];
+ const pose=k=>{let best=null,e=1e9;for(let th=95;th>=50;th-=0.25){const b=body(k,th);const S=shOf(b.P,b.T);const H=cc(S,54,PV,BAR).sort((x,y)=>y[1]-x[1])[0];
+   const a=M(b.a,armTo(S,H,fwd,'1'));const cx=comX(b.P,a,0.06,H);const q=Math.abs(cx-4);if(q<e){e=q;best=a;}}return best;};
+ E.lmslrdl={view:'side',floor:FL,hl:['thigh','torso'],anchor:{j:'an2',at:AN2},
+  props:[{t:'floor',y:FL},{t:'lm',from:PV,j:'ha1',over:8,plate:16,s:1}],
+  frames:[{a:pose(0),d:600,hold:300},{a:pose(0.3),d:500},{a:pose(0.6),d:500},{a:pose(0.85),d:450},{a:pose(1),d:500,hold:300},{a:pose(0.7),d:450},{a:pose(0.35),d:450}]};}
+
+// ---------- Landmine Rotational Clean & Press ----------
+// Video frontal, Drehpunkt rechts; in 2D als Seitenansicht mit Drehpunkt rechts: die Fuesse stehen entlang der Stange
+// (wie im Video), nach dem Aufdrehen ist das eine Schrittstellung (nahes Bein = Druckseite hinten).
+// Start: Gewicht auf dem hinteren (stangenseitigen) Bein, Hinge, beide Haende am Stangenende tief zwischen den Schienbeinen.
+// Hueftstreckung + Aufdrehen (hintere Ferse dreht hoch, Gewicht wandert aufs vordere Bein), Stangenende steigt auf dem
+// Kreis zur nahen Schulter (Fang mit beiden Haenden). Ferne Hand loest, nahe Hand drueckt in Stangenrichtung nach vorn-oben.
+// Die Rotation selbst ist in 2D nur angedeutet: Gewichtsverlagerung + hintere Ferse dreht auf.
+{const BAR=198;const AN2=[0,0],TOE1=[-40,0];
+ const K={st:{p:[-32,-74],T:-52,f:0,hd:-36,m:'str'},p1:{p:[-26,-78],T:-72,f:14,hd:-62,m:'str'},p2:{p:[-15,-84],T:-84,f:32,hd:-84,m:'hp'},
+          ca:{p:[-12,-81],T:-84,f:40,hd:-86,m:'rk'},lo:{p:[-3,-86.5],T:-73,f:52,hd:-82,m:'lo'}};
+ const rack=(P,T)=>add(add(shOf(P,T),D(T),-9),D(T+90),8);
+ const HC=rack(K.ca.p,K.ca.T);const PV=[HC[0]+Math.sqrt(BAR*BAR-(PY-HC[1])**2),PY];
+ const handOf=b=>{const S=shOf(b.p,b.T);if(b.m==='str')return cc(S,54,PV,BAR).sort((x,y)=>y[1]-x[1])[0];
+   if(b.m==='lo')return cc(S,54.2,PV,BAR).sort((x,y)=>x[1]-y[1])[0];return onC(PV,BAR,rack(b.p,b.T)[1]+(b.m==='hp'?22:0),-1);};
+ const base=(p,T,f,hd)=>{const an1=toeAn(TOE1,f);return M(legTo(p,AN2,'2'),legTo(p,an1,'1'),{foot2:0,foot1:r1(f),torso:r1(T),head:r1(hd)});};
+ // Pose zwischen zwei Schluesselposen: Koerper linear, Hand entlang des Stangenkreises
+ const mk=(b0,b1,u,two,pk)=>{const p=lerp2(b0.p,b1.p,u),T=lerp(b0.T,b1.T,u),f=lerp(b0.f,b1.f,u),hd=lerp(b0.hd,b1.hd,u);
+   const H=onAng(PV,BAR,lerp(angOn(PV,handOf(b0)),angOn(PV,handOf(b1)),u));const S=shOf(p,T);
+   const a=M(base(p,T,f,hd),armTo(S,H,pk||lower,'1'));
+   if(two)Object.assign(a,armTo(S,H,pk||lower,'2'));else Object.assign(a,{uarm2:96,farm2:88});return a;};
+ const fr=[];const P=(a,d,hold)=>fr.push({a,d,hold:hold||0});
+ P(mk(K.st,K.st,0,true,fwd),220,350);P(mk(K.st,K.p1,0.5,true,fwd),110);P(mk(K.p1,K.p1,0,true,fwd),55);
+ for(const u of [0.2,0.4,0.6,0.8])P(mk(K.p1,K.p2,u,true,u<0.5?fwd:lower),45);P(mk(K.p2,K.p2,0,true),130);P(mk(K.p2,K.ca,0.5,true),130);
+ P(mk(K.ca,K.ca,0,true),220,200);P(mk(K.ca,K.ca,0,false),110);
+ P(mk(K.ca,K.lo,0.35,false),110);P(mk(K.ca,K.lo,0.7,false),110);P(mk(K.lo,K.lo,0,false),550,350);
+ P(mk(K.ca,K.lo,0.7,false),200);P(mk(K.ca,K.lo,0.35,false),200);P(mk(K.ca,K.ca,0,false),200,100);
+ P(mk(K.ca,K.ca,0,true),300,150);P(mk(K.p2,K.ca,0.5,true),250);P(mk(K.p2,K.p2,0,true),250);for(const u of [0.8,0.6,0.4,0.2])P(mk(K.p1,K.p2,u,true,u<0.5?fwd:lower),100);
+ P(mk(K.p1,K.p1,0,true,fwd),300);P(mk(K.st,K.p1,0.5,true,fwd),300);
+ E.lmclean={view:'side',floor:FL,hl:['thigh','uarm'],anchor:{j:'an2',at:AN2},
+  props:[{t:'floor',y:FL},{t:'lm',from:PV,j:'ha1',over:6,plate:16,s:1}],
+  frames:fr};}
+
+// ---------- Landmine Rainbow (Anti-Rotation), Frontalansicht ----------
+// Figur schaut zum Betrachter, Drehpunkt mittig vor ihr am Boden. Becken und Fuesse fest, Knie locker.
+// Haende uebereinander am Stangenende fuehren einen Regenbogen: ueber Kopf -> neben die linke Huefte -> ueber Kopf ->
+// rechte Huefte. Arme werden in 3D geloest (Hand auf der Kugel um den Drehpunkt, Ellbogen nach unten-aussen) und
+// projiziert (Verkuerzung). Rumpf neigt sich nur minimal seitlich, keine Rotation.
+{const BAR=200,PEL=[0,-86],AN=[[-15,0],[15,0]];
+ const YT=-167,XB=36;
+ const sh3=(T)=>{const nk=add(PEL,D(T),50),sb=add(nk,D(T),-4),pp=D(T+90);return [add(sb,pp,-19),add(sb,pp,19)];};
+ // Tiefe des Koerpers: oben sind die Arme fast gestreckt
+ const S0=sh3(-90);const dzT=Math.sqrt(53.8*53.8-(S0[0][0])**2-(S0[0][1]-YT)**2);
+ const ZB=dzT+Math.sqrt(BAR*BAR-(PY-YT)**2);
+ const hand3=(x,y)=>[x,y,ZB-Math.sqrt(Math.max(0,BAR*BAR-x*x-(PY-y)*(PY-y)))];
+ // Oben: Haende knapp ueber dem Scheitel (YT). Tiefster Punkt: so tief, wie die starre Stange es dann erlaubt;
+ // nahe Hand darf seitlich neben der Huefte bis 10 Einheiten hinter der Koerperebene liegen (ferner Arm erreicht sie noch).
+ let YBT=-90;while(hand3(XB,YBT)[2]<-10)YBT-=0.5;
+ function arm3(S,H,out){const w=Math.max(0,Math.min(1,out*H[0]/XB));const v=[H[0]-S[0],H[1]-S[1],H[2]];let d=Math.hypot(...v);const u=v.map(c=>c/d);d=Math.min(d,54.9);
+  const a=(29*29-26*26+d*d)/(2*d),h=Math.sqrt(Math.max(0,29*29-a*a));let p=[out*(1.1-0.7*w),0.45+0.55*w,0.1-0.75*w];const pu=p[0]*u[0]+p[1]*u[1]+p[2]*u[2];p=p.map((c,i)=>c-pu*u[i]);const pl=Math.hypot(...p);p=p.map(c=>c/pl);
+  const El=[S[0]+u[0]*a+p[0]*h,S[1]+u[1]*a+p[1]*h];const Hp=[S[0]+u[0]*d,S[1]+u[1]*d];return {El,Hp};}
+ const pose=ph=>{const s=Math.sin(ph*R),c=Math.cos(ph*R);const x=XB*s,y=YBT-(YBT-YT)*c;const T=-90+4.5*s;
+  const H=hand3(x,y);const S=sh3(T);const o={torso:r1(T),head:r1(-90+1.5*s),foot1:180,foot2:0,s_foot:0.6};
+  for(const i of [0,1]){const sd=String(i+1);const hp=[PEL[0]+(i?8.5:-8.5)*Math.cos((T+90)*R),PEL[1]+(i?8.5:-8.5)*Math.sin((T+90)*R)];
+   const k=ik2(hp,AN[i],45,43,i?fwd:back);o['thigh'+sd]=k.a1;o['shin'+sd]=k.a2;
+   const A=arm3([S[i][0],S[i][1],0],H,i?1:-1);Object.assign(o,seg('uarm'+sd,sub(A.El,S[i]),29),seg('farm'+sd,sub(A.Hp,A.El),26));}
+  return o;};
+ const PV=[0,FL+16]; // in der Projektion etwas unter der Bodenlinie = vor der Figur
+ const fr=[];const seq=[];
+ for(const sg of [-1,1]){seq.push([0,260,350]);for(let p=15;p<90;p+=15)seq.push([sg*p,p<45?190:210]);seq.push([sg*90,260,250]);for(let p=75;p>0;p-=15)seq.push([sg*p,p>45?170:150]);}
+ for(const q of seq)fr.push({a:pose(q[0]),d:q[1],hold:q[2]||0});
+ E.lmrainbow={view:'front',floor:FL,hl:['torso','uarm'],anchor:{j:'pelvis',at:PEL},
+  props:[{t:'floor',y:FL},{t:'lm',from:PV,j:'ha1',over:5,plate:0,s:0.8}],
+  frames:fr};}
+})(window.EXA);
+window.EXA=window.EXA||{};
+(function(E){ const FL=4;
+// KB Core: Halo, Windmill, Tragevarianten (Rack, Kellner, Bottoms-up), Koffer-Kreuzheben, Gorilla Row,
+// Plank Pull-Through, Pullover. Posen werden aus Zielpunkten berechnet (Hand, Ellbogen, Fuss, Becken).
+const R=Math.PI/180;
+const M=(...o)=>Object.assign({},...o);
+const r1=v=>Math.round(v*10)/10, r2=v=>Math.round(v*100)/100;
+const D=a=>[Math.cos(a*R),Math.sin(a*R)];
+const add=(p,v,s)=>[p[0]+v[0]*(s===undefined?1:s),p[1]+v[1]*(s===undefined?1:s)];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const Ln=v=>Math.hypot(v[0],v[1]), A_=v=>r1(Math.atan2(v[1],v[0])/R);
+const unit=v=>{const l=Ln(v)||1;return [v[0]/l,v[1]/l];};
+const lerp=(a,b,t)=>a+(b-a)*t, lerp2=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t)];
+const cl=v=>Math.max(-1,Math.min(1,v));
+// Segment aus Vektor: Winkel + Laengenskalierung (Verkuerzung)
+function seg(k,v,L0){const o={};const m=k.match(/[12]$/);const base=k.replace(/[12]$/,'');o[k]=A_(v);o['s_'+base+(m?m[0]:'')]=r2(Math.min(1,Ln(v)/L0));return o;}
+// 2-Gelenk-IK p->q, pick(m0,m1)=true waehlt Loesung 0
+function ik2(p,q,L1,L2,pick){const v=sub(q,p);const d=Math.max(Math.abs(L1-L2)+0.5,Math.min(Ln(v),L1+L2-0.05));const b=Math.atan2(v[1],v[0]);
+ const al=Math.acos(cl((L1*L1+d*d-L2*L2)/(2*L1*d)));
+ const S=[1,-1].map(s=>{const a1=b+s*al;const m=add(p,[Math.cos(a1),Math.sin(a1)],L1);return {m,a1:r1(a1/R),a2:A_(sub(q,m))};});
+ return pick(S[0].m,S[1].m)?S[0]:S[1];}
+const lower=(a,b)=>a[1]>b[1], higher=(a,b)=>a[1]<b[1], fwd=(a,b)=>a[0]>b[0], back=(a,b)=>a[0]<b[0];
+const armTo=(S,H,pick,sd)=>{const s=ik2(S,H,29,26,pick);const k=sd||'';return {['uarm'+k]:s.a1,['farm'+k]:s.a2};};
+// Verkuerzter Arm (Ellbogen zeigt zur Kamera/weg): Ellbogen-Hinweis Eh so verschieben, dass beide Segmente <= Laenge
+function fsArm(S,Eh,H,sd){let e=Eh.slice();for(let i=0;i<30;i++){let v=sub(e,S);if(Ln(v)>29)e=add(S,unit(v),29);v=sub(e,H);if(Ln(v)>26)e=add(H,unit(v),26);}
+ return M(seg('uarm'+sd,sub(e,S),29),seg('farm'+sd,sub(H,e),26));}
+// Front-/Seitenansicht: Gelenkpunkte relativ zum Becken (wie anim.js)
+function joints(pel,t,st,front){const td=D(t),pp=D(t+90),TL=50*(st||1);const nk=add(pel,td,TL),sb=add(nk,td,-4);
+ return {nk,sh1:add(sb,pp,front?-19:0),sh2:add(sb,pp,front?19:0),hi1:add(pel,pp,front?-8.5:0),hi2:add(pel,pp,front?8.5:0)};}
+const legTo=(hip,an,pick,sd)=>{const s=ik2(hip,an,45,43,pick);return {['thigh'+sd]:s.a1,['shin'+sd]:s.a2,_kn:s.m};};
+const T=(f,d,hold)=>M(f,{d,hold:hold||0});
+const strip=o=>{const q={};for(const k in o)if(k[0]!=='_')q[k]=o[k];return q;};
+
+// ---------- Gehzyklus (Seitenansicht, Gehen auf der Stelle, Becken fix in x) ----------
+// 4 Frames: Kontakt 1 (Bein 1 vorn Ferse, Bein 2 hinten Zehe), Mitte (Bein 1 Stand), Kontakt 2, Mitte (Bein 2 Stand).
+// Fuesse werden per IK auf den Boden gesetzt, Beckenhoehe ergibt sich aus dem Standbein (kleines Auf und Ab).
+function gait(h){
+ const heel=(x)=>({an:[x,-1],foot:-14});            // Fersenaufsatz: Ferse am Boden, Zehen hoch
+ const toe=(x)=>({an:[x,-7.2],foot:31});             // Abdruck: Zehe am Boden, Ferse hoch
+ const flat=(x)=>({an:[x,0],foot:0});
+ const swing=(x)=>({an:[x,-12],foot:22});
+ const legs=(L1,L2,py)=>{const P=[0,py];const a=M({foot1:L1.foot,foot2:L2.foot});
+   for(const [s,L] of [[1,L1],[2,L2]]){const k=ik2(P,L.an,45,43,fwd);a['thigh'+s]=k.a1;a['shin'+s]=k.a2;}return a;};
+ const pyFor=(...an)=>Math.max(...an.map(p=>p[1]-Math.sqrt(Math.max(0,87.2*87.2-p[0]*p[0]))));
+ const C=(f,b)=>{const F=heel(h),B=toe(-h-4);const py=r1(pyFor(F.an,[B.an[0],B.an[1]+3]));
+   return {a:f===1?legs(F,B,py):legs(B,F,py),py};};
+ const Pz=(s)=>{const S=flat(-2),W=swing(-1);const py=r1(pyFor(S.an)-0.6);return {a:s===1?legs(S,W,py):legs(W,S,py),py};};
+ return [C(1),Pz(1),C(2),Pz(2)];}
+// freier Arm (Seite 2) schwingt gegengleich zum Bein 2: Bein 1 vorn -> Arm 2 vorn
+const swing2=[{uarm2:78,farm2:68},{uarm2:90,farm2:84},{uarm2:101,farm2:97},{uarm2:90,farm2:84}];
+function carry(G,armFix,extra,dur){return G.map((g,i)=>({a:M({torso:-90,head:-90},g.a,armFix,swing2[i],extra?extra[i]:{}),anchor:{j:'pelvis',at:[0,g.py]},d:dur||420}));}
+const GT=gait(19);
+
+// ---------- KB Halo (Frontansicht, stehend) ----------
+// KB kopfueber an den Hoernern (Glocke oben). Glocke kreist eng um den Kopf: vor der Brust -> neben dem linken Ohr
+// (nahe Hand darunter, Unterarm senkrecht; ferne Hand ueber den Kopf) -> hinter dem Kopf (Haende am Hinterkopf,
+// Ellbogen hoch) -> rechtes Ohr -> Brust. Kopf, Rumpf und Beine bleiben still.
+{const PEL=[0,-88],J=joints(PEL,-90,1,true),S1=J.sh1,S2=J.sh2;
+ const legs={thigh1:93,shin1:91,thigh2:87,shin2:89,foot1:180,foot2:0,s_foot:0.6};
+ const OFF=[-5,10]; // Hand 1 relativ zur Glockenmitte (Glocke sitzt mittig zwischen den Haenden, oberhalb)
+ const bc=th=>{const s=Math.sin(th*R),c=Math.cos(th*R);return [-21*s,-155+(c>0?29:12.5)*c];};
+ // Ellbogen-Hinweise und Hand 2 pro Position (th: 0 vorn, 90 links, 180 hinten, 270 rechts)
+ const P={0:{h2:[5,10],e1:[-15,-105],e2:[15,-105]},
+          45:{h2:[5,10],e1:[-30,-110],e2:[14,-114]},
+          90:{h2:[4,5],e1:[-28,-121],e2:[7,-160]},
+          135:{h2:[5,9],e1:[-30,-156],e2:[16,-162]},
+          180:{h2:[5,10],e1:[-27,-160],e2:[27,-160]}};
+ const pose=th=>{const mir=th>180;const q=mir?360-th:th;const c=bc(th);const p=P[q];
+  let h1,h2,e1,e2;
+  if(!mir){h1=add(c,OFF);h2=add(c,p.h2);e1=p.e1;e2=p.e2;}
+  else{ // gespiegelt: Rollen der Haende tauschen, Hand 1 bleibt am Glockengriff (OFF)
+   h1=add(c,OFF);h2=add(c,q===90?[4,6]:[-OFF[0],OFF[1]]);
+   e1=[-p.e2[0],p.e2[1]];e2=[-p.e1[0],p.e1[1]];}
+  return M({torso:-90,head:-90},legs,fsArm(S1,e1,h1,'1'),fsArm(S2,e2,h2,'2'));};
+ const ths=[0,45,90,135,180,225,270,315];
+ E.halo={view:'front',floor:FL,hl:['uarm','torso'],anchor:{j:'pelvis',at:PEL},
+  // Glocke hinter dem Kopf (Frames 3 und 4 = Weg 135 -> 180 -> 225 Grad): Kopie mit layer:'back', sonst vorn
+  props:[{t:'floor',y:FL},{t:'kb',j:'ha1',down:-63.4,s:1.12,on:[0,1,2,5,6,7]},{t:'kb',j:'ha1',down:-63.4,s:1.12,layer:'back',on:[3,4]}],
+  frames:ths.map((th,i)=>({a:pose(th),d:i===0?520:430,hold:i===0?350:0}))};}
+
+// ---------- KB Windmill (Frontansicht) ----------
+// KB-Arm (Seite 1, Bildschirm links) gesperrt senkrecht ueber der Schulter in jedem Frame. Fuesse breit, zur freien
+// Seite gedreht. Huefte schiebt zur KB-Seite raus, Rumpf klappt aus der Huefte zur freien Seite, hinteres Bein
+// gestreckt, vorderes Knie leicht gebeugt, freie Hand gleitet innen am vorderen Bein bis zum Schienbein.
+{const A1=[-27,0],A2=[29,0];
+ const pose=k=>{const t=lerp(-90,-17,k),st=lerp(1,0.86,k);let P=[lerp(-1,-15,k),0];
+  // Beckenhoehe: hinteres Bein fast gestreckt
+  const fitY=()=>{let best=-88;for(let y=-90;y<=-60;y+=0.1){const J=joints([P[0],y],t,st,true);if(Ln(sub(J.hi1,A1))<=87.6){best=y;break;}}return best;};
+  P[1]=r1(fitY());const J=joints(P,t,st,true);
+  const L1=legTo(J.hi1,A1,back,'1'),L2=legTo(J.hi2,A2,fwd,'2');
+  // freie Hand: auf der Innenseite des vorderen Beins, von Oberschenkel (k=0) bis Schienbein (k=1)
+  const kn=L2._kn;const tgt=k<0.5?lerp2(lerp2(J.hi2,kn,0.55),kn,k*2):lerp2(kn,lerp2(kn,A2,0.62),(k-0.5)*2);
+  const H2=add(tgt,[-5,0]);
+  const a2=Ln(sub(H2,J.sh2))>54.5?(()=>{const v=sub(H2,J.sh2);return {uarm2:A_(v),farm2:A_(v)};})():armTo(J.sh2,H2,fwd,'2');
+  return M({torso:r1(t),s_torso:r2(st),head:r1(t-lerp(0,10,k)),s_head:r2(lerp(1,0.9,k)),uarm1:-90,farm1:-90,foot1:4,foot2:6,s_foot:0.7},strip(L1),strip(L2),a2);};
+ E.windmill={view:'front',floor:FL,hl:['torso'],anchor:{j:'an1',at:A1},
+  props:[{t:'floor',y:FL},{t:'kb',j:'ha1',down:90,s:1.15,layer:'back'}],
+  frames:[T({a:pose(0)},1300,500),T({a:pose(0.5)},1300,0),T({a:pose(1)},1100,400),T({a:pose(0.5)},1100,0)]};}
+
+// ---------- KB Front-Rack Tragen (Seitenansicht) ----------
+// KB im Rack der nahen Hand: Griff vor dem Brustbein, Glocke liegt aussen auf dem Unterarm, Ellbogen eng vor den
+// Rippen. Aufrecht, keine Rueck-/Seitlage. Freier Arm schwingt locker gegengleich.
+{const S=[0,-46];const El=[9,-17.5],H=[14,-40];
+ const rack=M(seg('uarm1',sub(El,S),29),seg('farm1',sub(H,El),26));
+ E.rackcarry={view:'side',floor:FL,hl:['torso'],anchor:{j:'pelvis',at:[0,GT[0].py]},
+  props:[{t:'floor',y:FL},{t:'kb',j:'ha1',down:120,s:1.1}],
+  frames:carry(GT,rack)};}
+
+// ---------- KB Kellner-Tragen (Seitenansicht) ----------
+// Arm 1 gestreckt senkrecht ueber der Schulter (Bizeps am Ohr), Glocke liegt hinten auf dem Unterarm.
+// Rumpf aufrecht, kein Hohlkreuz. Freier Arm haengt locker.
+{const oh={uarm1:-94,farm1:-91};
+ E.waiter={view:'side',floor:FL,hl:['torso','uarm'],anchor:{j:'pelvis',at:[0,GT[0].py]},
+  props:[{t:'floor',y:FL},{t:'kb',j:'ha1',down:155}],
+  frames:carry(GT,oh)};}
+
+// ---------- Bottoms-up Tragen (Seitenansicht) ----------
+// KB kopfueber, Faust auf Kinnhoehe vor der Schulter, Unterarm senkrecht, Ellbogen ca. 90 Grad vor dem Rumpf.
+{const S=[0,-46];const El=[16,-25],H=[18,-51];
+ const bu=M(seg('uarm1',sub(El,S),29),seg('farm1',sub(H,El),26));
+ E.bucarry={view:'side',floor:FL,hl:['farm','torso'],anchor:{j:'pelvis',at:[0,GT[0].py]},
+  props:[{t:'floor',y:FL},{t:'kb',j:'ha1',down:-90,s:0.95}],
+  frames:carry(GT,bu)};}
+
+// ---------- KB Koffer-Kreuzheben (Frontansicht) ----------
+// KB aussen neben dem linken Fuss. Unten: Huefte zurueck, Knie gebeugt (Oberschenkel zeigen zur Kamera, verkuerzt),
+// Rumpf vorgeneigt (verkuerzt), Arm haengt gestreckt zur KB. Schultern bleiben waagerecht (Rumpf -90), freier Arm
+// leicht seitlich. Oben: aufrecht, KB neben dem Oberschenkel.
+{const A1=[-14,0],A2=[14,0],KS=1.2,HB=FL-18.5*KS; // Griffhoehe wenn die KB am Boden steht
+ const pose=k=>{const py=lerp(-88,-50,k),st=lerp(1,0.55,k);const P=[0,py];const J=joints(P,-90,st,true);
+  const kx=lerp(14.5,27,k);const ky=lerp(-44,-36,k);
+  const K1=[-kx,ky],K2=[kx,ky];
+  const leg=M(seg('thigh1',sub(K1,J.hi1),45),seg('shin1',sub(A1,K1),43),seg('thigh2',sub(K2,J.hi2),45),seg('shin2',sub(A2,K2),43));
+  const H1=[lerp(-23,-31,k),lerp(J.sh1[1]+54.5,HB,k)];
+  const H2=add(J.sh2,[lerp(6,14,k),lerp(54.5,52.5,k)]);
+  return M({torso:-90,s_torso:r2(st),head:-90,s_head:r2(lerp(1,0.45,k)),foot1:168,foot2:12,s_foot:0.6},leg,
+   seg('uarm1',sub(H1,J.sh1).map(v=>v*29/55),29),seg('farm1',sub(H1,J.sh1).map(v=>v*26/55),26),
+   {uarm2:A_(sub(H2,J.sh2)),farm2:A_(sub(H2,J.sh2))});};
+ E.suitcasedl={view:'front',floor:FL,hl:['torso'],anchor:{j:'pelvis',at:[0,-88]},
+  props:[{t:'floor',y:FL},{t:'kb',j:'ha1',down:90,s:KS}],
+  frames:[0,0.5,1,0.5].map((k,i)=>({a:pose(k),anchor:{j:'pelvis',at:[0,r1(lerp(-88,-50,k))]},d:[1000,700,800,800][i],hold:[400,0,250,0][i]}))};}
+
+// ---------- KB Gorilla Row (Seitenansicht) ----------
+// Breiter Stand, Hip-Hinge mit Rumpf ca. 34 Grad ueber der Waagerechten, Huefte hinten, Knie gebeugt, Schienbeine
+// fast senkrecht, Kopf neutral - alles bleibt fix. Zwei KB stehen am Boden unter den Schultern auf Hoehe Mittelfuss
+// (zwischen den Fuessen; gezeichnet vor dem nahen Schienbein). Nahe Hand rudert ihre KB zur Huefte, Ellbogen eng am
+// Koerper; ferne Hand drueckt ihre KB in den Boden. Absetzen (neutral), Seite wechseln.
+{const t=-34,KS=1.15,HY=r1(FL-18.5*KS),BX=5;
+ // Schulter senkrecht ueber dem Griff (Arm fast gestreckt) -> Becken; Knie per IK (vorn)
+ const Sw=[BX,HY-54.6],P=sub(Sw,joints([0,0],t,1,false).sh1),S=Sw;
+ const L=legTo(P,[0,0],fwd,'');
+ const TOP=add(add(P,D(t),12),D(t+90),9); // Hand an der Huefte
+ const base={torso:t,head:t+2,foot:0,thigh:L.thigh,shin:L.shin};
+ // Ellbogen eng: Hand-Weg vom Griff gerade zur Huefte, Ellbogen ueber/hinter der Hand (nah am Rumpf)
+ const arm=(sd,k)=>armTo(S,lerp2([BX,HY],TOP,k),higher,sd);
+ const N=M(base,arm('1',0),arm('2',0));
+ E.gorillarow={view:'side',floor:FL,hl:['uarm','torso'],anchor:{j:'an1',at:[0,0]},
+  props:[{t:'floor',y:FL},{t:'kb',j:'ha2',down:90,s:KS},{t:'kb',j:'ha1',down:90,s:KS}],
+  frames:[T({a:N},450,300),T({a:M(N,arm('1',0.5))},400),T({a:M(N,arm('1',1))},700,300),T({a:M(N,arm('1',0.5))},450),
+          T({a:N},450,300),T({a:M(N,arm('2',0.5))},400),T({a:M(N,arm('2',1))},700,300),T({a:M(N,arm('2',0.5))},450)]};}
+
+// ---------- KB Plank Pull-Through (Frontansicht: Kamera vor dem Kopf) ----------
+// Hoher Stuetz: Schultern breit, beide Arme senkrecht, Haende unter den Schultern, Kopf neutral zur Kamera,
+// Rumpf und Beine laufen von der Kamera weg (stark verkuerzt), Fuesse etwas breiter als die Huefte.
+// KB steht unter der Brust innen neben der rechten Hand (Bild rechts). Linke Hand (Bild links) greift unter dem
+// Koerper durch, zieht die KB am Boden auf die eigene Seite, laesst los, zurueck in den Stuetz. Dann umgekehrt.
+// Becken und Schultern bleiben waagerecht und ruhig (Becken fix, Rumpf -90).
+{const PY=-40,KS=0.8,HY=r1(FL-18.5*KS),BXk=11;
+ const sts=r2(-(PY+59)/50*-1); // Schulter auf -55: PY-50*sts+4=-55
+ const P=[0,PY],J=joints(P,-90,sts,true);
+ const AN=[12,-27]; // Perspektive: Beine laufen weg, Fuesse erscheinen hoeher und schmaler
+ const leg=M(seg('thigh1',sub(lerp2(J.hi1,[-AN[0],AN[1]],0.5),J.hi1),45),seg('shin1',sub([-AN[0],AN[1]],lerp2(J.hi1,[-AN[0],AN[1]],0.5)),43),
+             seg('thigh2',sub(lerp2(J.hi2,AN,0.5),J.hi2),45),seg('shin2',sub(AN,lerp2(J.hi2,AN,0.5)),43),{foot:90,s_foot:0.2});
+ const base=M({torso:-90,s_torso:sts,head:-90,s_head:0.1},leg,{uarm:90,farm:90});
+ const reach=(sd,H)=>{const S=J['sh'+sd],v=sub(H,S),l=Math.min(1,Ln(v)/55);return {['uarm'+sd]:A_(v),['farm'+sd]:A_(v),['s_uarm'+sd]:r2(l),['s_farm'+sd]:r2(l)};};
+ const F=(sd,H)=>M(base,H?reach(sd,H):{});
+ const g=sd=>sd==='1'?1:-1; // Seite 1: KB von +BXk nach -BXk
+ const rep=sd=>{const s=g(sd),x0=J['sh'+sd][0];return [
+   T({a:F(sd,[x0+s*3,-7])},350),            // Hand hebt ab
+   T({a:F(sd,[s*BXk,HY])},450,150),          // unter dem Koerper an der KB (greift)
+   T({a:F(sd,[0,HY])},450),                  // zieht
+   T({a:F(sd,[-s*BXk,HY])},450,200),         // eigene Seite, loslassen
+   T({a:F(sd,[x0+s*3,-7])},350)];};          // Hand zurueck
+ // Frames: 0 neutral, 1-5 Wdh. Seite 1, 6 neutral, 7-11 Wdh. Seite 2
+ const fr=[T({a:base},450,400)].concat(rep('1'),[T({a:base},450,400)],rep('2'));
+ const A=[BXk,HY],B=[-BXk,HY];
+ E.pullthrough={view:'front',floor:FL,hl:['torso'],anchor:{j:'pelvis',at:P},
+  props:[{t:'floor',y:FL},
+   {t:'kb',j:A,down:90,s:KS,on:[10,11,0,1]},{t:'kb',j:'ha1',down:90,s:KS,on:[2,3]},
+   {t:'kb',j:B,down:90,s:KS,on:[4,5,6,7]},{t:'kb',j:'ha2',down:90,s:KS,on:[8,9]}],
+  frames:fr};}
+// ---------- KB Pullover in Rueckenlage (Seitenansicht, Kopf links) ----------
+// Hooklying: Knie gebeugt, Fuesse flach am Boden, unterer Ruecken bleibt am Boden (Rumpf fix 180).
+// Arme gestreckt halten die KB an den Hoernern: von senkrecht ueber der Brust in einem Bogen ueber den Kopf bis
+// knapp ueber den Boden hinter dem Kopf, zurueck.
+{const P=[0,FL-11];const FT=[46,FL-4];
+ const L=legTo(P,FT,higher,'');
+ const base={torso:180,head:180,thigh:L.thigh,shin:L.shin,foot:0};
+ const arm=a=>M(base,{uarm:a,farm:a});
+ E.kbpullover={view:'side',floor:FL,hl:['torso','uarm'],anchor:{j:'pelvis',at:P},
+  props:[{t:'floor',y:FL},{t:'mat',x1:-95,x2:70,y:FL-3},{t:'kb',j:'ha1',down:90}],
+  frames:[T({a:arm(-90)},700,400),T({a:arm(-125)},700),T({a:arm(-150)},800),T({a:arm(-168)},900,350),T({a:arm(-150)},600),T({a:arm(-125)},600)]};}
+})(window.EXA);
