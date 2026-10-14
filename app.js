@@ -596,6 +596,9 @@ function countdown(sec,onTick,onEnd){
 function ringT(frac){const r=42,c=2*Math.PI*r;return `<svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="${r}" fill="none" stroke="var(--line)" stroke-width="8"/><circle cx="48" cy="48" r="${r}" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(c*frac).toFixed(1)} ${c.toFixed(1)}"/></svg>`;}
 const mmss=s=>s>=60?`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`:String(s);
 
+// Gewichtsauswahl: hoechstens 4 Werte rund um das aktuelle Gewicht, Rest hinter "mehr" (keine Ueberbreite, wenig Hoehe)
+function kgChips(ws,cur){const n=ws.length;let i=ws.indexOf(cur);if(i<0)i=0;const lo=n>5?Math.max(0,Math.min(i-1,n-4)):0,hi=n>5?lo+4:n;
+  return ws.map((w,j)=>`<button data-kgw="${w}" class="${w===cur?'on':''}${j<lo||j>=hi?' hx':''}">${w===0?'ohne':w}</button>`).join('')+(n>5?`<button class="kgmore" data-kgmore="1" aria-label="Alle Gewichte">···</button>`:'');}
 function renderStep(){
   const st=P.steps[P.i];
   if(st.k==='warm')return stepWarm(st);
@@ -655,7 +658,7 @@ function stepEx(st){
     <div class="pl-cues">${x.c.map(c=>`<div>· ${esc(c)}</div>`).join('')}${x.e?`<div class="pl-warn">Achtung: ${esc(x.e)}</div>`:''}</div>
     <div class="pl-tools"><button class="th up ${rateOf(id)===1?'on':''}" data-rate="1" data-id="${id}">${I.up}</button><button class="th down ${rateOf(id)===-1?'on':''}" data-rate="-1" data-id="${id}">${I.down}</button><button id="swp">${I.swap} Tauschen</button><button id="skp">${I.skip} Überspringen</button><button id="inf">${I.info}</button></div>`,
    (time?`<div class="timer"><button class="iconbtn" id="tm">−</button><div class="tring" id="tr">${ringT(1)}<b id="tv">${mmss(P.val)}</b></div><button class="iconbtn" id="tp">+</button>${x.side?'<div class="tside" id="tsd">Seite 1</div>':''}</div>`
-         :`${loadSrc(id)?`<div class="kgrow" id="kgrow"><span class="kgl">${loadSrc(id)==='bb'?'kg gesamt':x.n2?'kg je Hantel':'kg'}</span><div class="kgch">${weights(id).map(w=>`<button data-kgw="${w}" class="${w===P.kg?'on':''}">${w===0?'ohne':w}</button>`).join('')}</div></div>`:''}
+         :`${loadSrc(id)?`<div class="kgrow" id="kgrow"><span class="kgl">${loadSrc(id)==='bb'?'kg gesamt':x.n2?'kg je Hantel':'kg'}</span><div class="kgch">${kgChips(weights(id),P.kg)}</div></div>`:''}
            <div class="logger"><div class="step"><button id="vm">−</button><div class="val"><b id="vv">${P.val}</b><span>Wdh${x.side?' / Seite':''}</span></div><button id="vp">+</button></div></div>`)+
     `${setGrid(id,st)}
      <button class="bigbtn" id="done">${time?I.play+' Start':I.check+' Satz fertig'}</button>`);
@@ -672,7 +675,7 @@ function stepEx(st){
     $('#vm').onclick=()=>{P.val=Math.max(0,P.val-1);upd();};
     $('#vp').onclick=()=>{P.val=P.val+1;upd();};
     $$('[data-kgw]').forEach(bt=>bt.onclick=()=>{P.kg=+bt.dataset.kgw;$$('[data-kgw]').forEach(o=>o.classList.toggle('on',o===bt));});
-    const on=$('.kgch .on');if(on)on.scrollIntoView({inline:'center',block:'nearest'});
+    const mo=$('[data-kgmore]');if(mo)mo.onclick=()=>{const c=$('.kgch');const all=c.classList.toggle('all');mo.textContent=all?"‹":"···";};
     $('#done').onclick=()=>{logSet(id,P.val,P.kg);next();};
   }else{
     const total=()=>x.side?P.val*2:P.val;
@@ -949,7 +952,7 @@ function init(){
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!P.on){const t=ymd(NOW());if(t!==TODAY)renderAll();}});
 }
 window.addEventListener('DOMContentLoaded',init);
-window.__T={estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
+window.__T={renderStep:()=>renderStep(),openSettings:()=>openSettings(),closeSheet:()=>closeSheet(),exDetail:id=>exDetail(id),estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
 })();
 
 // iOS 26: nach dem Schliessen der Tastatur bleibt der Viewport verschoben, deshalb zuruecksetzen
