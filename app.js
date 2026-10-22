@@ -267,7 +267,8 @@ function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');c
 
 /* ---------------- Sheet ---------------- */
 function openSheet(html,onMount){const sh=$('#sheet');sh.innerHTML='<div class="grab"></div><button class="sheet-x" aria-label="Schließen">'+I.x+'</button>'+html;$('.sheet-x',sh).onclick=closeSheet;$('#sheetbg').classList.add('on');sh.classList.add('on');sh.scrollTop=0;if(onMount)onMount(sh);mountAll(sh);}
-function closeSheet(){vidStop();const sh=$('#sheet');$$('[data-fig]',sh).forEach(el=>FIG.unmount(el));sh.classList.remove('on');$('#sheetbg').classList.remove('on');setTimeout(()=>{if(!sh.classList.contains('on'))sh.innerHTML='';},300);}
+let SBACK=null;
+function closeSheet(){vidStop();const sh=$('#sheet');$$('[data-fig]',sh).forEach(el=>FIG.unmount(el));const back=SBACK;SBACK=null;if(back){back();return;}sh.classList.remove('on');$('#sheetbg').classList.remove('on');setTimeout(()=>{if(!sh.classList.contains('on'))sh.innerHTML='';},300);}
 
 /* ---------------- Video ----------------
    Eingebettet, nie heruntergeladen. Startpunkt pro Video lokal einstellbar ("Clip ab hier"). */
@@ -408,7 +409,7 @@ function renderHome(){
    <div class="blockinfo">Block ${b} · Woche ${wib} von 4. ${wib<4?`Neue Übungsauswahl in ${5-wib} ${5-wib===1?'Woche':'Wochen'}.`:'Nächste Woche neue Übungsauswahl.'} Daumen runter wirkt ab nächster Woche, Tauschen sofort.</div>`;
   mountAll($('#v-home'));
   $('#gear').onclick=openSettings;
-  $('#custb').onclick=custSheet;
+  $('#custb').onclick=()=>custSheet(CST&&CST.d===TODAY);
   $$('#v-home [data-dur]').forEach(b=>b.onclick=()=>durSheet(b.dataset.dur));
   $$('#v-home [data-start]').forEach(b=>b.onclick=()=>{audio();isRun(b.dataset.start)?startRun(b.dataset.start):startSession(b.dataset.start,false);});
   $$('#v-home [data-short]').forEach(b=>b.onclick=()=>{audio();startSession(b.dataset.short,true);});
@@ -866,36 +867,67 @@ function custReplaceCand(groups){
   const sug=suggestion();if(sug.kind!=='go'||!sug.sid||isRun(sug.sid))return null;
   const s=SESS.find(x=>x.id===sug.sid);if(!s)return null;const pg=grpsOfReg(s.reg||'full');
   const ov=pg.filter(g=>groups.includes(g)).length/pg.length;return {sid:s.id,name:s.name,def:ov>=0.5};}
-function custSheet(){
+let CST=null;
+function custPickList(g,ex,skip){
+  const used=new Set(ex);
+  return custCands(g,used).filter(id=>(MG[id].f[g]||0)>0).sort((a,b)=>{const ra=MG[a].r==='compound'?0:MG[a].r==='prehab'?2:1,rb=MG[b].r==='compound'?0:MG[b].r==='prehab'?2:1;
+    return ra-rb||(MG[b].f[g]||0)-(MG[a].f[g]||0)||EX[a].n.localeCompare(EX[b].n,'de');});}
+function custSheet(resume){
   const pref=S.custPref||{groups:['brust','ruecken'],dur:prof().dur||30,seed:0};
-  const st={groups:pref.groups.slice(),dur:pref.dur,seed:pref.seed||0,repl:null};
+  const st=(resume&&CST&&CST.d===TODAY)?CST:{d:TODAY,groups:pref.groups.slice(),dur:pref.dur,seed:pref.seed||0,repl:null,man:null,pick:null};
+  CST=st;
   const draw=()=>{
     const sh=$('#sheet');const y=sh.classList.contains('on')?sh.scrollTop:0;
     const b=buildCustom(st.groups,st.dur,st.seed);
+    if(st.man){b.ex=st.man.ex.slice();b.of=st.man.of.slice();b.notes=b.notes.filter(n=>n.k==='recent');}
     const prevC=S.custom;S.custom={d:TODAY,groups:st.groups,dur:st.dur,ex:b.ex,of:b.of};const est=b.ex.length?estMin(null,'CUST'):0;S.custom=prevC;
     const rc=custReplaceCand(st.groups);if(st.repl===null&&rc)st.repl=rc.def;
+    if(st.man&&b.ex.length&&est<st.dur*0.8)b.notes.unshift({k:'manshort',est});
     const dot=g=>{const d=daysAgo(grpLast(g));return d<=1?`<i class="gdot warn" title="kürzlich trainiert"></i><em>${d===0?'heute':'gestern'}</em>`:d===2?`<i class="gdot"></i><em>vor 2 Tagen</em>`:'';};
-    const nt=b.notes.map(n=>n.k==='short'?`<div class="cnote">Mit dieser Auswahl passen sinnvoll ${n.n} Übungen, die Einheit wird kürzer. ${GROUPS.filter(x=>!st.groups.includes(x[0])).slice(0,2).map(x=>`<button class="chip mini" data-addg="${x[0]}">+ ${x[1]}</button>`).join(' ')}</div>`
+    const nt=b.notes.map(n=>n.k==='manshort'?`<div class="cnote">Deine Liste füllt etwa ${n.est} von ${st.dur} Minuten. Für mehr: Übung hinzufügen oder neu vorschlagen lassen.</div>`:n.k==='short'?`<div class="cnote">Mit dieser Auswahl passen sinnvoll ${n.n} Übungen, die Einheit wird kürzer. ${GROUPS.filter(x=>!st.groups.includes(x[0])).slice(0,2).map(x=>`<button class="chip mini" data-addg="${x[0]}">+ ${x[1]}</button>`).join(' ')}</div>`
       :`<div class="cnote">${esc(grpLabel(n.g))} war ${n.d===0?'heute':'gestern'} schon dran, deshalb weniger Sätze dafür.</div>`).join('');
+    const sel=GROUPS.map(x=>x[0]).filter(g=>st.groups.includes(g));
+    const picker=()=>{const pk=st.pick;const g=pk.g;const list=custPickList(g,b.ex,pk.i==='add'?-1:pk.i);
+      return `<div class="cpick"><div class="cpick-h"><b>${pk.i==='add'?'Übung hinzufügen':'Tauschen gegen'}</b><button class="chip mini" data-pcancel="1">Abbrechen</button></div>
+        ${sel.length>1?`<div class="cptabs">${sel.map(x=>`<button class="${x===g?'on':''}" data-pg="${x}">${esc(grpLabel(x))}</button>`).join('')}</div>`:''}
+        ${list.length?list.map(id=>`<button class="cprow" data-pid="${id}"><div class="fig" data-fig="${id}" data-aspect="1" data-still="0.4"></div><div class="t"><b>${esc(EX[id].n)}</b><span>${esc(EX[id].pat||'')}${MG[id].r==='isolation'?' · Isolation':''}</span></div></button>`).join('')
+          :`<div class="small" style="padding:8px 2px">Mit deiner Ausrüstung gibt es hier keine weitere Übung.</div>`}</div>`;};
+    const row=(id,i)=>`<div class="crow ${st.pick&&st.pick.i===i?'act':''}"><div class="cmain" data-cx="${id}"><div class="fig" data-fig="${id}" data-aspect="1" data-still="0.4"></div><div class="t"><b>${i+1}. ${esc(EX[id].n)}</b><span>${esc(grpLabel(b.of[i]))} · ${b.R} × ${esc(EX[id].tgt)}</span></div></div>
+      <button class="cbtn" data-sw="${i}" aria-label="Tauschen">${I.swap}</button>${b.ex.length>1?`<button class="cbtn" data-rm="${i}" aria-label="Entfernen">${I.x}</button>`:''}</div>${st.pick&&st.pick.i===i?picker():''}`;
     openSheet(`<h3>Was willst du heute trainieren?</h3><div class="small" style="margin:4px 0 12px">Muskelgruppen und Dauer selbst wählen. Bizeps läuft beim Rücken mit, Trizeps bei der Brust.</div>
       <div class="gchips">${GROUPS.map(([k,l,sub])=>`<button class="gchip ${st.groups.includes(k)?'on':''}" data-g="${k}"><b>${l}</b><span>${sub||'&nbsp;'}</span><small>${dot(k)}</small></button>`).join('')}</div>
       <h2 style="margin-top:16px">Dauer</h2><div class="segs">${DURS.map(d=>`<button class="${d===st.dur?'on':''}" data-d="${d}">${d}</button>`).join('')}</div>
       ${b.ex.length?`<div class="csum">${b.ex.length} Übungen · ${b.ex.length*b.R} Sätze · ca. ${est} Min</div>${nt}
-        <div class="clist">${b.ex.map((id,i)=>`<div class="crow" data-cx="${id}"><div class="fig" data-fig="${id}" data-aspect="1" data-still="0.4"></div><div class="t"><b>${i+1}. ${esc(EX[id].n)}</b><span>${esc(grpLabel(b.of[i]))} · ${b.R} × ${esc(EX[id].tgt)}</span></div></div>`).join('')}</div>
-        <button class="chip" id="cshuf" style="margin-top:4px">${I.swap.replace('<svg','<svg style="width:13px;height:13px;vertical-align:-2px"')} Andere Übungen</button>`
+        <div class="small" style="margin:2px 0 4px">${I.swap.replace('<svg','<svg style="width:12px;height:12px;vertical-align:-1px"')} tauscht eine Übung gezielt, × nimmt sie raus. Tipp auf die Übung zeigt Video und Technik.</div>
+        <div class="clist">${b.ex.map(row).join('')}</div>
+        ${st.pick&&st.pick.i==='add'?picker():''}
+        <div class="ctools"><button class="chip" id="cadd">${I.plus.replace('<svg','<svg style="width:13px;height:13px;vertical-align:-2px"')} Übung hinzufügen</button><button class="chip" id="cshuf">${I.swap.replace('<svg','<svg style="width:13px;height:13px;vertical-align:-2px"')} ${st.man?'Neu vorschlagen':'Andere Übungen'}</button></div>`
         :`<div class="cnote" style="margin-top:14px">${st.groups.length?'Für diese Auswahl passt mit deiner Ausrüstung keine Übung. Trag in den Einstellungen mehr Ausrüstung ein oder wähle eine andere Gruppe.':'Wähle mindestens eine Muskelgruppe.'}</div>`}
       ${rc&&b.ex.length?`<label class="crepl"><input type="checkbox" id="crep" ${st.repl?'checked':''}><span>Ersetzt <b>${esc(rc.name)}</b> in deinem Wochenplan</span></label>`:''}
       <div class="btnrow" style="margin-top:14px"><button class="btn pri" id="cgo" ${b.ex.length?'':'disabled'}>${I.play} Start</button></div>
       <div class="small" style="margin-top:10px">Ob Ganzkörper oder einzelne Muskelgruppen: Bei gleicher Satzzahl pro Woche wachsen Kraft und Muskeln gleich gut. Wichtig ist, dass jede Gruppe pro Woche genug harte Sätze bekommt.</div>`,
      sh=>{
-      $$('[data-g]',sh).forEach(x=>x.onclick=()=>{const g=x.dataset.g;st.groups=st.groups.includes(g)?st.groups.filter(z=>z!==g):st.groups.concat(g);st.repl=null;draw();});
-      $$('[data-addg]',sh).forEach(x=>x.onclick=()=>{st.groups=st.groups.concat(x.dataset.addg);st.repl=null;draw();});
+      const man=()=>{if(!st.man)st.man={ex:b.ex.slice(),of:b.of.slice()};return st.man;};
+      $$('[data-g]',sh).forEach(x=>x.onclick=()=>{const g=x.dataset.g;const off=st.groups.includes(g);st.groups=off?st.groups.filter(z=>z!==g):st.groups.concat(g);st.repl=null;st.pick=null;
+        if(st.man){if(off){const k=st.man.of.map((o,i)=>o!==g?i:-1).filter(i=>i>=0);st.man={ex:k.map(i=>st.man.ex[i]),of:k.map(i=>st.man.of[i])};if(!st.man.ex.length)st.man=null;}
+          else{const add=buildCustom([g],st.dur,st.seed);const free=add.ex.filter(id=>!st.man.ex.includes(id)).slice(0,Math.max(1,Math.min(3,add.ex.length)));free.forEach(id=>{st.man.ex.push(id);st.man.of.push(g);});}}
+        draw();});
+      $$('[data-addg]',sh).forEach(x=>x.onclick=()=>{st.groups=st.groups.concat(x.dataset.addg);st.repl=null;st.man=null;st.pick=null;draw();});
       $$('[data-d]',sh).forEach(x=>x.onclick=()=>{st.dur=+x.dataset.d;draw();});
-      const sf=$('#cshuf',sh);if(sf)sf.onclick=()=>{st.seed++;draw();};
+      const sf=$('#cshuf',sh);if(sf)sf.onclick=()=>{st.seed++;st.man=null;st.pick=null;draw();};
+      const ca=$('#cadd',sh);if(ca)ca.onclick=()=>{st.pick=st.pick&&st.pick.i==='add'?null:{i:'add',g:sel[0]};draw();
+        if(st.pick){const el=$('.cpick',$('#sheet'));if(el)el.scrollIntoView({block:'nearest'});}};
+      $$('[data-sw]',sh).forEach(x=>x.onclick=e=>{e.stopPropagation();const i=+x.dataset.sw;st.pick=st.pick&&st.pick.i===i?null:{i,g:b.of[i]};draw();});
+      $$('[data-rm]',sh).forEach(x=>x.onclick=e=>{e.stopPropagation();const m=man();const i=+x.dataset.rm;m.ex.splice(i,1);m.of.splice(i,1);st.pick=null;draw();});
+      $$('[data-pg]',sh).forEach(x=>x.onclick=()=>{st.pick.g=x.dataset.pg;draw();});
+      $$('[data-pcancel]',sh).forEach(x=>x.onclick=()=>{st.pick=null;draw();});
+      $$('[data-pid]',sh).forEach(x=>x.onclick=()=>{const m=man();const id=x.dataset.pid,g=st.pick.g;
+        if(st.pick.i==='add'){m.ex.push(id);m.of.push(g);}else{m.ex[st.pick.i]=id;m.of[st.pick.i]=g;}
+        if(st.pick.i!=='add')st.pick=null;draw();toast(EX[id].n+' ist drin');});
       const cr=$('#crep',sh);if(cr)cr.onchange=()=>{st.repl=cr.checked;};
-      $$('[data-cx]',sh).forEach(x=>x.onclick=()=>exDetail(x.dataset.cx));
+      $$('[data-cx]',sh).forEach(x=>x.onclick=()=>{exDetail(x.dataset.cx);SBACK=()=>custSheet(true);});
       $('#cgo',sh).onclick=()=>{if(!b.ex.length)return;S.custPref={groups:st.groups,dur:st.dur,seed:st.seed};
-        S.custom={d:TODAY,groups:st.groups,dur:st.dur,ex:b.ex,of:b.of,replace:(rc&&st.repl)?rc.sid:null};save();audio();closeSheet();startSession('CUST',false);};
+        S.custom={d:TODAY,groups:st.groups,dur:st.dur,ex:b.ex,of:b.of,replace:(rc&&st.repl)?rc.sid:null};save();audio();CST=null;closeSheet();startSession('CUST',false);};
       sh.scrollTop=y;});
   };
   draw();
@@ -1104,7 +1136,7 @@ function init(){
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!P.on){const t=ymd(NOW());if(t!==TODAY)renderAll();}});
 }
 window.addEventListener('DOMContentLoaded',init);
-window.__T={buildCustom:(g,d,s)=>buildCustom(g,d,s||0),custSheet:()=>custSheet(),durSheet:sid=>durSheet(sid),effProf:sid=>effProf(sid),renderHome:()=>renderHome(),renderStep:()=>renderStep(),openSettings:()=>openSettings(),closeSheet:()=>closeSheet(),exDetail:id=>exDetail(id),estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
+window.__T={buildCustom:(g,d,s)=>buildCustom(g,d,s||0),custSheet:r=>custSheet(r),durSheet:sid=>durSheet(sid),effProf:sid=>effProf(sid),renderHome:()=>renderHome(),renderStep:()=>renderStep(),openSettings:()=>openSettings(),closeSheet:()=>closeSheet(),exDetail:id=>exDetail(id),estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
 })();
 
 // iOS 26: nach dem Schliessen der Tastatur bleibt der Viewport verschoben, deshalb zuruecksetzen
