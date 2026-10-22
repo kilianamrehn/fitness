@@ -397,3 +397,11 @@ h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
 @keyframes phHi{0%,38%{background:transparent}44%,62%{background:rgba(193,94,58,.18)}66%,100%{background:transparent}}
 @keyframes phHome{0%,64%{opacity:0}70%,96%{opacity:1}100%{opacity:0}}
 @keyframes phPop{0%,72%{transform:scale(0)}78%{transform:scale(1.15)}82%,100%{transform:scale(1)}}
+
+/* Pause / Neu am Timer */
+.cdctl{display:flex;flex-direction:column;gap:8px;}
+.rest .cdctl{flex-direction:row;justify-content:center;margin:2px 0 10px;}
+.cdctl button{display:flex;align-items:center;gap:6px;height:38px;padding:0 12px;border-radius:12px;background:var(--bg);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink2);}
+.cdctl button svg{width:16px;height:16px;fill:currentColor;}
+.cdctl #cdr svg{fill:none;}
+.cdctl.paused #cdp{background:var(--ink);border-color:var(--ink);color:#fff;}

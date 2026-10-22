@@ -589,9 +589,24 @@ function quitAsk(){
     $('#q3',sh).onclick=closeSheet;
     const q4=$('#q4',sh);if(q4)q4.onclick=()=>{closeSheet();dropEx(cur.id);};});
 }
+/* Countdown mit Pause und Neustart (Aufwärmen, Zeit-Übungen, Pausen) */
+const IC_PAUSE='<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>';
+const IC_PLAY='<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>';
+const IC_RESTART='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg>';
 function countdown(sec,onTick,onEnd){
-  stopTimer();let left=sec;const end=Date.now()+sec*1000;onTick(left);
-  P.timer=setInterval(()=>{const l=Math.max(0,Math.ceil((end-Date.now())/1000));if(l!==left){left=l;if(l<=3&&l>0)tick();onTick(l);}if(l<=0){stopTimer();ding();onEnd();}},200);
+  stopTimer();P.cd={sec,onTick,onEnd,left:sec,paused:false};runCd(sec);cdCtl();
+}
+function runCd(sec){
+  const c=P.cd;if(!c)return;stopTimer();let left=sec;const end=Date.now()+sec*1000;c.left=sec;c.onTick(left);
+  P.timer=setInterval(()=>{const l=Math.max(0,Math.ceil((end-Date.now())/1000));if(l!==left){left=l;c.left=l;if(l<=3&&l>0)tick();c.onTick(l);}if(l<=0){stopTimer();P.cd=null;ding();c.onEnd();}},200);
+}
+function cdCtl(){
+  const a=$('#tr')||$('#rv');if(!a||!P.cd)return;let el=$('#cdctl');
+  if(!el){el=document.createElement('div');el.id='cdctl';el.className='cdctl';a.insertAdjacentElement('afterend',el);}
+  const c=P.cd;el.innerHTML=`<button id="cdp" aria-label="${c.paused?'Fortsetzen':'Pause'}">${c.paused?IC_PLAY:IC_PAUSE}<span>${c.paused?'Fortsetzen':'Pause'}</span></button><button id="cdr" aria-label="Neu starten">${IC_RESTART}<span>Neu</span></button>`;
+  el.classList.toggle('paused',c.paused);
+  $('#cdp').onclick=()=>{const c=P.cd;if(!c)return;if(c.paused){c.paused=false;runCd(c.left);}else{stopTimer();c.paused=true;}cdCtl();};
+  $('#cdr').onclick=()=>{const c=P.cd;if(!c)return;c.paused=false;runCd(c.sec);cdCtl();};
 }
 function ringT(frac){const r=42,c=2*Math.PI*r;return `<svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="${r}" fill="none" stroke="var(--line)" stroke-width="8"/><circle cx="48" cy="48" r="${r}" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(c*frac).toFixed(1)} ${c.toFixed(1)}"/></svg>`;}
 const mmss=s=>s>=60?`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`:String(s);
