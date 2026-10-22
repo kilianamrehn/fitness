@@ -57,7 +57,9 @@ function cfgOf(p){const m={10:{stations:4,rounds:2,warm:false},15:{stations:4,ro
 /* geschätzte Dauer, wenn die Satzzahl von der Automatik abweicht */
 /* Dauer: aus den geplanten Übungen geschätzt (ca. 3 s pro Wiederholung, 10 s Einrichten pro Satz, Pausen, Aufwärmen),
    danach mit der eigenen gemessenen Zeit kalibriert (Median der letzten 5 vollen Einheiten). */
-function rawEst(sid){const c=cfgOf(prof());const R=c.rounds;let ex=[];try{ex=sessEx(sid);}catch(e){}
+/* Dauer nur für heute (Startkarte) bzw. eigenes Training: effektives Profil je Einheit */
+function effProf(sid){const p=prof();if(sid==='CUST'&&S.custom)return {...p,dur:S.custom.dur};const o=S.dayDur;if(o&&o.d===TODAY&&o.sid===sid)return {...p,dur:o.dur};return p;}
+function rawEst(sid){const c=cfgOf(effProf(sid));const R=c.rounds;let ex=[];try{ex=sessEx(sid);}catch(e){}
   if(!ex.length)return prof().dur*60*c.rounds/c.auto;
   let t=(S.settings.warm&&c.warm)?120:0;
   for(const e of ex){const x=EX[e.id];const le=lastEntry(e.id);const reps=(le&&le.sets&&le.sets.length)?le.sets.reduce((a,b)=>a+b,0)/le.sets.length:(+x.def||10);
@@ -66,11 +68,13 @@ function rawEst(sid){const c=cfgOf(prof());const R=c.rounds;let ex=[];try{ex=ses
 function paceFactor(){const r=(S.sessions||[]).filter(x=>x.est&&x.min&&!x.short).slice(-5).map(x=>x.min*60/x.est).sort((a,b)=>a-b);
   if(r.length<2)return 1;return Math.min(1.8,Math.max(0.6,r[Math.floor(r.length/2)]));}
 function estMin(p,sid){sid=sid||(SESS.find(x=>!x.run)||{}).id;return Math.max(4,Math.round(rawEst(sid)*paceFactor()/60));}
-let SESS=[];
+let SESS=[],SESS_ALL=[];
 function sessList(){const p=prof(),c=cfgOf(p);const seen={};
-  const out=(WEEK_T[p.freq]||WEEK_T[3]).map(k=>{const t=SESS_T.find(x=>x.id===k)||SPLIT_T[k];seen[k]=(seen[k]||0)+1;
+  const full=(WEEK_T[p.freq]||WEEK_T[3]).map(k=>{const t=SESS_T.find(x=>x.id===k)||SPLIT_T[k];seen[k]=(seen[k]||0)+1;
     const id=seen[k]>1?k+String.fromCharCode(96+seen[k]):k;
-    return {...t,id,name:t.name+(seen[k]>1?' ('+seen[k]+'.)':''),st:t.st.slice(0,c.stations)};});
+    return {...t,id,name:t.name+(seen[k]>1?' ('+seen[k]+'.)':'')};});
+  SESS_ALL=full; // alle Stationen der Vorlage: Plan deckt auch längere Tage ab
+  const out=full.map(t=>({...t,st:t.st.slice(0,c.stations)}));
   if(p.cardio&&p.cardio!=='none'){for(let i=0;i<(p.cardioN||1);i++)out.push({id:i?'RUN2':'RUN',name:CARDIO[p.cardio].label+(i?' 2':''),run:true,ctype:p.cardio});}
   return out;}
 const isRun=sid=>/^RUN/.test(sid);
@@ -124,7 +128,8 @@ function pickFor(slot,pool,used,seed,prev,prev2,sel){
   if(ws.every(w=>w===0))ws=ids.map(()=>1);
   return wpick(ids,ws,rng(hash(seed+slot)));
 }
-function slotsAll(){const out=[];for(const s of SESS){if(s.run)continue;for(const [k,pool,label] of s.st)out.push({slot:s.id+'.'+k,pool,label,sid:s.id});}return out;}
+function slotsAll(){const out=[];const L=SESS_ALL.length?SESS_ALL:SESS;const mx=Math.max(0,...L.map(s=>(s.st||[]).length));
+  for(let i=0;i<mx;i++)for(const s of L){if(s.run||!s.st[i])continue;const [k,pool,label]=s.st[i];out.push({slot:s.id+'.'+k,pool,label,sid:s.id});}return out;}
 function newPlan(b){
   const old=S.plan;const prev=old?old.sel:null, prev2=old?old.prev:null;
   const used=new Set(), sel={};
@@ -163,9 +168,12 @@ function ensurePlan(){
   }
   save();
 }
-function sessEx(sid){const s=SESS.find(x=>x.id===sid);return s.st.map(([k,pool,label])=>({slot:sid+'.'+k,pool,label,id:S.plan.sel[sid+'.'+k]})).filter(e=>e.id);}
+function sessObj(sid){if(sid==='CUST')return custObj();return SESS.find(x=>x.id===sid);}
+function stationsOf(sid){return cfgOf(effProf(sid)).stations;}
+function sessEx(sid){if(sid==='CUST')return (S.custom&&S.custom.ex||[]).map((id,i)=>({slot:'CUST.'+i,pool:null,label:grpLabel(S.custom.of&&S.custom.of[i]),id}));
+  const s=(SESS_ALL.find(x=>x.id===sid))||SESS.find(x=>x.id===sid);return s.st.slice(0,stationsOf(sid)).map(([k,pool,label])=>({slot:sid+'.'+k,pool,label,id:S.plan.sel[sid+'.'+k]})).filter(e=>e.id);}
 function slotOfId(id){for(const k in S.plan.sel)if(S.plan.sel[k]===id)return k;return null;}
-function slotLabel(slot){const [sid,k]=slot.split('.');const s=SESS.find(x=>x.id===sid);if(!s)return '';const st=s.st.find(x=>x[0]===k);return st?`${s.name} · ${st[2]}`:s.name;}
+function slotLabel(slot){const [sid,k]=slot.split('.');if(sid==='CUST')return 'Eigenes Training';const s=SESS_ALL.find(x=>x.id===sid)||SESS.find(x=>x.id===sid);if(!s)return '';const st=s.st.find(x=>x[0]===k);return st?`${s.name} · ${st[2]}`:s.name;}
 function swapSlot(slot,id){S.plan.sel[slot]=id;S.plan.user[slot]=true;save();}
 
 /* ---------------- Woche ---------------- */
@@ -187,6 +195,7 @@ function suggestion(){
   const regOf=sid=>{const x=SESS.find(z=>z.id===sid);return x?(x.reg||'full'):'full';};
   const clash=(a,b)=>a!=='light'&&b!=='light'&&(a==='full'||b==='full'||a===b);
   const yReg=[];for(const wk in S.done)for(const sid in S.done[wk])if(!isRun(sid)&&S.done[wk][sid]===yest)yReg.push(regOf(sid));
+  for(const x of S.sessions||[])if(x.sid==='CUST'&&x.d===yest&&x.groups&&!x.replace)yReg.push(regOfGroups(x.groups));
   if(yReg.length){
     const free=openS.find(sid=>!yReg.some(r=>clash(r,regOf(sid))));
     if(free)return {kind:'go',sid:free,note:free!==openS[0]?'Die eigentlich nächste Einheit trifft die Muskeln von gestern, deshalb heute diese.':null};
@@ -324,6 +333,7 @@ function exDetail(id){
       <div class="kv"><b>Schwerer:</b> ${esc(x.p)}</div>
       <div class="kv"><b>Leichter:</b> ${esc(x.r)}</div>
       <div class="kv"><b>Muskeln:</b> ${esc(x.m)} · <b>Evidenz</b> ${esc(x.g)}</div>
+      ${window.MG&&MG[id]&&MG[id].p.length&&!['mobility','cardio'].includes(MG[id].r)?`<div class="kv"><b>Muskelgruppe:</b> ${MG[id].p.map(grpLabel).join(', ')}${MG[id].s.length?' · nebenbei '+MG[id].s.map(grpLabel).join(', '):''}</div>`:''}
       ${slot?`<div class="small" style="margin-top:6px">Aktuell in ${esc(slotLabel(slot))}</div>`:''}
       ${x.type!=='run'?rateBar(id):''}
       ${v?`<div class="small" style="margin-top:12px">Video: ${esc(v.c)} · <a href="https://www.youtube.com/watch?v=${v.v}" target="_blank" rel="noopener" style="color:var(--ink3)">auf YouTube öffnen</a></div>`:''}
@@ -354,9 +364,10 @@ function sessCard(sid,sug){
   const ex=sessEx(sid);
   return `<div class="next"><div class="lbl">${sug&&sug.note?'Vorschlag':'Als Nächstes'}</div><div class="ttl">${esc(s.name)}</div><div class="sub">${esc(s.sub)}</div>
     ${sug&&sug.note?`<div class="note">${esc(sug.note)}</div>`:''}
+    <button class="durchip" data-dur="${sid}">⏱ ${effProf(sid).dur} Min${effProf(sid).dur!==prof().dur?' · nur heute':''} <span>ändern</span></button>
     <div class="stgrid">${ex.map(e=>`<button class="stc" data-ex="${e.id}"><div class="fig" data-fig="${e.id}" data-aspect="1"></div><div class="nm">${esc(EX[e.id].n)}</div></button>`).join('')}</div>
     <div class="btnrow"><button class="btn pri" data-start="${sid}">${I.play} Start · ≈${estMin(null,sid)} Min</button><button class="btn sec" data-short="${sid}">Express</button></div>
-    <div class="hint">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(cfgOf(prof()).stations*1.2))} Minuten. Zählt trotzdem für die Woche.</div></div>`;
+    <div class="hint">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(stationsOf(sid)*1.2))} Minuten. Zählt trotzdem für die Woche.</div></div>`;
 }
 function renderHome(){
   ensurePlan();
@@ -380,9 +391,12 @@ function renderHome(){
    <div class="slist">${SESS.map(s=>{const done=dn[s.id];
      if(s.run){const x=EX[runIdOf(s.id)];const cd=CARDIO[s.ctype]||CARDIO.run;return `<button class="srow ${done?'done':''}" data-sess="${s.id}"><div class="minis"><div class="mini" data-fig="${cd.fig}" ${cd.nodb?'data-nodb="1"':''} data-aspect="1" data-still="0.3"></div></div><div class="t"><b>${esc(s.name)}</b><span>${esc(x.n)} · ${esc(x.tgt)}</span></div><div class="ok">${I.check}</div></button>`;}
      const ex=sessEx(s.id);return `<button class="srow ${done?'done':''}" data-sess="${s.id}"><div class="minis">${ex.map(e=>`<div class="mini" data-fig="${e.id}" data-aspect="1" data-still="0.35"></div>`).join('')}</div><div class="t"><b>${esc(s.name)}</b><span>${done?'Erledigt '+fmtD(done):esc(ex.map(e=>EX[e.id].n).join(', '))}</span></div><div class="ok">${I.check}</div></button>`;}).join('')}</div>
+   <button class="custbtn" id="custb">${I.plus}<div><b>Eigenes Training</b><span>Muskelgruppen und Dauer selbst wählen</span></div></button>
    <div class="blockinfo">Block ${b} · Woche ${wib} von 4. ${wib<4?`Neue Übungsauswahl in ${5-wib} ${5-wib===1?'Woche':'Wochen'}.`:'Nächste Woche neue Übungsauswahl.'} Daumen runter wirkt ab nächster Woche, Tauschen sofort.</div>`;
   mountAll($('#v-home'));
   $('#gear').onclick=openSettings;
+  $('#custb').onclick=custSheet;
+  $$('#v-home [data-dur]').forEach(b=>b.onclick=()=>durSheet(b.dataset.dur));
   $$('#v-home [data-start]').forEach(b=>b.onclick=()=>{audio();isRun(b.dataset.start)?startRun(b.dataset.start):startSession(b.dataset.start,false);});
   $$('#v-home [data-short]').forEach(b=>b.onclick=()=>{audio();startSession(b.dataset.short,true);});
   $$('#v-home [data-markrun]').forEach(b=>b.onclick=()=>{const sid=b.dataset.markrun;markDone(sid);S.sessions.push({d:TODAY,sid,ex:runIdOf(sid),manual:true});save();toast('Abgehakt.');renderAll();});
@@ -410,7 +424,7 @@ function sessSheet(sid){
    ${bonus.id?`<h2>Bonus · optional · ${esc(bonus.theme)}</h2>
    <div class="excard" data-exd="${bonus.id}"><div class="fig" data-fig="${bonus.id}" data-aspect="1"></div><div class="t"><b>${esc(EX[bonus.id].n)}</b><span>2 Runden am Ende, wenn du Lust hast</span></div></div>`:''}
    <div class="btnrow" style="margin-top:16px"><button class="btn pri" id="go">${I.play} ${done?'Nochmal':'Start'}</button><button class="btn ghost" id="gos" style="flex:0 0 auto;padding:0 16px">Express</button></div>
-   <div class="small" style="margin-top:8px">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(cfgOf(prof()).stations*1.2))} Minuten, ohne Aufwärmen. Zählt trotzdem für die Woche.</div>`,
+   <div class="small" style="margin-top:8px">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(stationsOf(sid)*1.2))} Minuten, ohne Aufwärmen. Zählt trotzdem für die Woche.</div>`,
   sh=>{bindRate(sh,()=>{sessSheet(sid);renderHome();});
     $$('[data-exd]',sh).forEach(c=>c.onclick=e=>{if(e.target.closest('button'))return;exDetail(c.dataset.exd);});
     $$('[data-swap]',sh).forEach(b=>b.onclick=e=>{e.stopPropagation();swapSheet(b.dataset.swap,()=>{sessSheet(sid);renderHome();});});
@@ -534,8 +548,8 @@ const P={on:false};
 function lastEntry(id){const es=LOG[id]||[];for(let i=es.length-1;i>=0;i--)if(es[i].d!==TODAY||!P.on)return es[i];return es[es.length-1]||null;}
 function startSession(sid,short){
   ensurePlan();
-  const s=SESS.find(x=>x.id===sid);const ex=sessEx(sid);
-  const C=cfgOf(prof());const R=short?1:C.rounds;const mode=short?'zirkel':S.settings.mode;
+  const s=sessObj(sid);const ex=sessEx(sid);
+  const C=cfgOf(effProf(sid));const R=short?1:C.rounds;const mode=short?'zirkel':S.settings.mode;
   const steps=[];
   if(S.settings.warm&&C.warm&&!short)WARMUP.forEach((w,i)=>steps.push({k:'warm',i,w}));
   if(mode==='zirkel'){
@@ -544,7 +558,7 @@ function startSession(sid,short){
   }else{
     ex.forEach((e,i)=>{for(let r=1;r<=R;r++){steps.push({k:'ex',id:e.id,slot:e.slot,st:i,r,R,n:ex.length});if(!(i===ex.length-1&&r===R))steps.push({k:'rest',t:r===R?60:75});}});
   }
-  if(!short&&S.week.bonus[sid]&&S.week.bonus[sid].id&&!ex.some(e=>e.id===S.week.bonus[sid].id))steps.push({k:'bonus',id:S.week.bonus[sid].id,theme:S.week.bonus[sid].theme});
+  if(!short&&sid!=='CUST'&&S.week.bonus[sid]&&S.week.bonus[sid].id&&!ex.some(e=>e.id===S.week.bonus[sid].id))steps.push({k:'bonus',id:S.week.bonus[sid].id,theme:S.week.bonus[sid].theme});
   steps.push({k:'end'});
   Object.assign(P,{on:true,sid,short,est:short?null:rawEst(sid),steps,i:0,t0:Date.now(),buf:{},exIds:ex.map(e=>e.id),bonusDone:false,timer:null,media:'fig'});
   $('#player').classList.add('on');document.body.style.overflow='hidden';wake(true);
@@ -753,8 +767,8 @@ function stepEnd(){
     if(kg>prevKg||(kg===prevKg&&best>prevBest&&prevBest>0))prs.push(`${EX[id].n}: ${best}${EX[id].type==='time'?' s':''}${kg?' mit '+kg+' kg':''}`);}
   const sets=Object.values(P.buf).reduce((a,b)=>a+b.sets.length,0);
   shell(`<div class="summary"><div class="pl-meta" style="margin-top:10px"><span class="st">Geschafft</span><span>${P.short?'Express':''}</span></div>
-     <h3>${esc(SESS.find(s=>s.id===P.sid).name)} ✓</h3>
-     <div class="sumstats"><div><b>${mins}</b><span>Minuten</span></div><div><b>${sets}</b><span>Sätze</span></div><div><b>${(HISTORY[WK]||0)+(doneWk()[P.sid]?0:1)}/${SESS.length}</b><span>Diese Woche</span></div></div>
+     <h3>${esc(sessObj(P.sid).name)} ✓</h3>
+     <div class="sumstats"><div><b>${mins}</b><span>Minuten</span></div><div><b>${sets}</b><span>Sätze</span></div><div><b>${(HISTORY[WK]||0)+(P.sid==='CUST'?(S.custom&&S.custom.replace&&!doneWk()[S.custom.replace]?1:0):(doneWk()[P.sid]?0:1))}/${SESS.length}</b><span>Diese Woche</span></div></div>
      ${prs.map(p=>`<div class="pr">${I.star} Neuer Bestwert · ${esc(p)}</div>`).join('')}
      <h2>Wie war's?</h2><div class="small" style="margin:-6px 0 6px">Daumen runter fliegt ab nächster Woche raus. Daumen hoch kommt öfter.</div>
      ${P.exIds.map(id=>`<div class="rrow" data-rr="${id}"><div class="h"><div class="fig" data-fig="${id}" data-aspect="1" data-still="0.4"></div><div class="nm">${esc(EX[id].n)}<span>${P.buf[id]?esc(fmtSets(id,P.buf[id])):'nicht gemacht'}</span></div><div class="thumbs"><button class="th up ${rateOf(id)===1?'on':''}" data-rate="1" data-id="${id}">${I.up}</button><button class="th down ${rateOf(id)===-1?'on':''}" data-rate="-1" data-id="${id}">${I.down}</button></div></div>${rateOf(id)===-1?`<div class="reasons">${['Schmerz','Langweilig','Aufbau nervt','Zu leicht'].map(w=>`<button data-why="${w}" data-id="${id}" class="${S.rate[id]&&S.rate[id].why===w?'on':''}">${w}</button>`).join('')}</div>`:''}</div>`).join('')}
@@ -769,11 +783,120 @@ function finish(mins){
   for(const id in P.buf){const b=P.buf[id];const arr=LOG[id]||(LOG[id]=[]);const ent={d:TODAY,v:fmtSets(id,b),sets:b.sets,kg:b.kg||null};if(b.kgs&&b.kgs.some(k=>k!=null))ent.kgs=b.kgs;
     const i=arr.findIndex(e=>e.d===TODAY);if(i>=0)arr[i]=ent;else arr.push(ent);LOG[id]=arr.slice(-60);}
   const exSteps=P.steps.filter(s=>s.k==='ex'&&!s.bonus).length;const doneSets=Object.entries(P.buf).filter(([id])=>!P.steps.find(s=>s.k==='ex'&&s.id===id&&s.bonus)).reduce((a,[,b])=>a+b.sets.length,0);
-  if(doneSets>=Math.ceil(exSteps/2)||P.short){markDone(P.sid);}
-  S.sessions.push({d:TODAY,sid:P.sid,min:mins,short:P.short,bonus:P.bonusDone,est:P.est||null});
+  const enough=doneSets>=Math.ceil(exSteps/2)||P.short;
+  if(P.sid==='CUST'){if(enough&&S.custom&&S.custom.replace&&!doneWk()[S.custom.replace])markDone(S.custom.replace);}
+  else if(enough){markDone(P.sid);}
+  S.sessions.push({d:TODAY,sid:P.sid,min:mins,short:P.short,bonus:P.bonusDone,est:P.est||null,...(P.sid==='CUST'&&S.custom?{groups:S.custom.groups,dur:S.custom.dur,replace:S.custom.replace||null}:{})});
   save();closePlayer();celebrate();
 }
 function celebrate(){const el=document.createElement('div');el.className='celebrate';el.innerHTML='<div class="c">'+I.check+'</div>';document.body.appendChild(el);setTimeout(()=>el.remove(),1000);if(navigator.vibrate)navigator.vibrate(60);}
+
+/* ---------------- Eigenes Training (Muskelgruppen und Dauer selbst wählen) ----------------
+   Regeln aus der Recherche (Recherche-Muskelgruppen-Training.md):
+   - Übung erscheint nur bei ihrer Hauptgruppe (MG.p), Nebengruppen zählen halb.
+   - Pro Gruppe mindestens 1 Station, höchstens ca. 10 harte Sätze (+ 1 Station Mitläufer: Trizeps/Bizeps/Waden).
+   - Restliche Stationen nach Gewicht verteilen: Beine 1,25 · Rücken 1 · Brust 1 · Schulter 0,75 · Rumpf 0,5.
+   - Gestern/heute trainierte Gruppe: halbe Stationen. Grundübung zuerst, Bewegungsmuster abdecken,
+     Stationen im Wechsel der Gruppen (nie zweimal hintereinander dieselbe Hauptgruppe, wenn vermeidbar). */
+const GROUPS=[['brust','Brust','mit Trizeps'],['ruecken','Rücken','mit Bizeps'],['schulter','Schulter',''],['beine','Beine','mit Po, Waden'],['rumpf','Rumpf','']];
+const GW={beine:1.25,ruecken:1,brust:1,schulter:.75,rumpf:.5};
+const DURS=[10,15,20,30,45,60];
+function grpLabel(g){const x=GROUPS.find(z=>z[0]===g);return x?x[1]:'';}
+function grpLast(g){let best=null;for(const id in LOG){const m=window.MG&&MG[id];if(!m||!m.p.includes(g)||m.r==='mobility'||m.r==='cardio')continue;for(const e of LOG[id]){if(e.d&&(!best||e.d>best))best=e.d;}}return best;}
+function daysAgo(d){if(!d)return 99;return Math.round((parseYmd(TODAY)-parseYmd(d))/DAY);}
+function regOfGroups(gs){const up=gs.some(g=>['brust','ruecken','schulter'].includes(g)),lo=gs.includes('beine');return up&&lo?'full':lo?'lower':up?'upper':'light';}
+function grpsOfReg(r){return r==='upper'?['brust','ruecken','schulter']:r==='lower'?['beine']:r==='light'?['rumpf']:['brust','ruecken','schulter','beine','rumpf'];}
+function custObj(){const c=S.custom||{groups:[]};return {id:'CUST',name:'Eigenes Training',sub:c.groups.map(grpLabel).join(' · '),reg:regOfGroups(c.groups)};}
+function custCands(g,used){
+  return Object.keys(window.MG||{}).filter(id=>EX[id]&&allowed(id)&&!used.has(id)&&rateOf(id)!==-1&&MG[id].p.includes(g)&&!['mobility','cardio'].includes(MG[id].r));}
+function riderOf(g,used){const key={brust:'trizeps',ruecken:'bizeps',beine:null}[g];
+  const ids=Object.keys(window.MG||{}).filter(id=>EX[id]&&allowed(id)&&!used.has(id)&&rateOf(id)!==-1&&MG[id].p.includes(g));
+  if(g==='beine')return ids.filter(id=>id==='calf');
+  return ids.filter(id=>(MG[id].f[key]||0)>=1);}
+function buildCustom(groups,dur,seed){
+  const cfg=cfgOf({...prof(),dur});const R=cfg.rounds,N=cfg.stations;const notes=[];
+  const gs=GROUPS.map(x=>x[0]).filter(g=>groups.includes(g));
+  if(!gs.length)return {ex:[],of:[],R,N,notes};
+  const used=new Set();const r=rng(hash('cust'+TODAY+seed+gs.join()));
+  const base=Math.max(1,Math.floor(10/R));
+  const cap={},alloc={},recent={};
+  for(const g of gs){const n=custCands(g,new Set()).filter(id=>(MG[id].f[g]||0)>0).length;recent[g]=daysAgo(grpLast(g))<=1;
+    let c=Math.min(base+(riderOf(g,new Set()).length?1:0),n+(riderOf(g,new Set()).length?1:0));
+    if(recent[g])c=Math.max(1,Math.floor(c/2));cap[g]=c;alloc[g]=c>0?1:0;}
+  let tot=gs.reduce((a,g)=>a+alloc[g],0);
+  while(tot<N){let best=null,bv=-1;for(const g of gs){if(alloc[g]>=cap[g])continue;const v=GW[g]/alloc[g];if(v>bv){bv=v;best=g;}}if(!best)break;alloc[best]++;tot++;}
+  if(tot<N)notes.push({k:'short',n:tot,full:N});
+  for(const g of gs)if(recent[g])notes.push({k:'recent',g,d:daysAgo(grpLast(g))});
+  // Auswahl je Gruppe: Grundübung zuerst, unterschiedliche Bewegungsmuster
+  const per={};
+  for(const g of gs){const list=[];const pats=new Set();let nMain=alloc[g];
+    const wantRider=alloc[g]>=3&&riderOf(g,used).length>0;if(wantRider)nMain--;
+    for(let k=0;k<nMain;k++){
+      let ids=custCands(g,used).filter(id=>(MG[id].f[g]||0)>=0.5&&MG[id].r!=='prehab');
+      if(!ids.length)ids=custCands(g,used).filter(id=>(MG[id].f[g]||0)>0);if(!ids.length)break;
+      const ws=ids.map(id=>{let w=weight(id,null,null,null)||0.0001;const m=MG[id];
+        if(k===0&&m.r==='compound')w*=4;if(m.r==='isolation')w*=k<=1?0.3:1;
+        if(/Explosiv/.test(EX[id].pat||''))w*=k===0?0.25:0.6;
+        if(prof().level!=='ein'&&(window.EASY||['schraegls']).includes(id))w*=0.25;
+        if(pats.has(EX[id].pat))w*=0.2;if((m.f[g]||0)<1)w*=0.5;return w;});
+      const id=wpick(ids,ws,r);list.push(id);used.add(id);pats.add(EX[id].pat);}
+    if(wantRider){const rider=riderOf(g,used);if(rider.length){const id=wpick(rider,rider.map(()=>1),r);list.push(id);used.add(id);}}
+    // Grundübungen vor Isolation
+    list.sort((a,b)=>(MG[a].r==='compound'?0:1)-(MG[b].r==='compound'?0:1));
+    per[g]=list;}
+  // Reihenfolge: reihum über die Gruppen (größere zuerst), Rumpf am Ende jeder Runde
+  const order=gs.slice().sort((a,b)=>GW[b]-GW[a]);const ex=[],of=[];
+  for(let k=0;k<12;k++)for(const g of order){const id=per[g][k];if(id){ex.push(id);of.push(g);}}
+  return {ex,of,R,N,notes};
+}
+function custReplaceCand(groups){
+  const sug=suggestion();if(sug.kind!=='go'||!sug.sid||isRun(sug.sid))return null;
+  const s=SESS.find(x=>x.id===sug.sid);if(!s)return null;const pg=grpsOfReg(s.reg||'full');
+  const ov=pg.filter(g=>groups.includes(g)).length/pg.length;return {sid:s.id,name:s.name,def:ov>=0.5};}
+function custSheet(){
+  const pref=S.custPref||{groups:['brust','ruecken'],dur:prof().dur||30,seed:0};
+  const st={groups:pref.groups.slice(),dur:pref.dur,seed:pref.seed||0,repl:null};
+  const draw=()=>{
+    const sh=$('#sheet');const y=sh.classList.contains('on')?sh.scrollTop:0;
+    const b=buildCustom(st.groups,st.dur,st.seed);
+    const prevC=S.custom;S.custom={d:TODAY,groups:st.groups,dur:st.dur,ex:b.ex,of:b.of};const est=b.ex.length?estMin(null,'CUST'):0;S.custom=prevC;
+    const rc=custReplaceCand(st.groups);if(st.repl===null&&rc)st.repl=rc.def;
+    const dot=g=>{const d=daysAgo(grpLast(g));return d<=1?`<i class="gdot warn" title="kürzlich trainiert"></i><em>${d===0?'heute':'gestern'}</em>`:d===2?`<i class="gdot"></i><em>vor 2 Tagen</em>`:'';};
+    const nt=b.notes.map(n=>n.k==='short'?`<div class="cnote">Mit dieser Auswahl passen sinnvoll ${n.n} Übungen, die Einheit wird kürzer. ${GROUPS.filter(x=>!st.groups.includes(x[0])).slice(0,2).map(x=>`<button class="chip mini" data-addg="${x[0]}">+ ${x[1]}</button>`).join(' ')}</div>`
+      :`<div class="cnote">${esc(grpLabel(n.g))} war ${n.d===0?'heute':'gestern'} schon dran, deshalb weniger Sätze dafür.</div>`).join('');
+    openSheet(`<h3>Was willst du heute trainieren?</h3><div class="small" style="margin:4px 0 12px">Muskelgruppen und Dauer selbst wählen. Bizeps läuft beim Rücken mit, Trizeps bei der Brust.</div>
+      <div class="gchips">${GROUPS.map(([k,l,sub])=>`<button class="gchip ${st.groups.includes(k)?'on':''}" data-g="${k}"><b>${l}</b><span>${sub||'&nbsp;'}</span><small>${dot(k)}</small></button>`).join('')}</div>
+      <h2 style="margin-top:16px">Dauer</h2><div class="segs">${DURS.map(d=>`<button class="${d===st.dur?'on':''}" data-d="${d}">${d}</button>`).join('')}</div>
+      ${b.ex.length?`<div class="csum">${b.ex.length} Übungen · ${b.ex.length*b.R} Sätze · ca. ${est} Min</div>${nt}
+        <div class="clist">${b.ex.map((id,i)=>`<div class="crow" data-cx="${id}"><div class="fig" data-fig="${id}" data-aspect="1" data-still="0.4"></div><div class="t"><b>${i+1}. ${esc(EX[id].n)}</b><span>${esc(grpLabel(b.of[i]))} · ${b.R} × ${esc(EX[id].tgt)}</span></div></div>`).join('')}</div>
+        <button class="chip" id="cshuf" style="margin-top:4px">${I.swap.replace('<svg','<svg style="width:13px;height:13px;vertical-align:-2px"')} Andere Übungen</button>`
+        :`<div class="cnote" style="margin-top:14px">${st.groups.length?'Für diese Auswahl passt mit deiner Ausrüstung keine Übung. Trag in den Einstellungen mehr Ausrüstung ein oder wähle eine andere Gruppe.':'Wähle mindestens eine Muskelgruppe.'}</div>`}
+      ${rc&&b.ex.length?`<label class="crepl"><input type="checkbox" id="crep" ${st.repl?'checked':''}><span>Ersetzt <b>${esc(rc.name)}</b> in deinem Wochenplan</span></label>`:''}
+      <div class="btnrow" style="margin-top:14px"><button class="btn pri" id="cgo" ${b.ex.length?'':'disabled'}>${I.play} Start</button></div>
+      <div class="small" style="margin-top:10px">Ob Ganzkörper oder einzelne Muskelgruppen: Bei gleicher Satzzahl pro Woche wachsen Kraft und Muskeln gleich gut. Wichtig ist, dass jede Gruppe pro Woche genug harte Sätze bekommt.</div>`,
+     sh=>{
+      $$('[data-g]',sh).forEach(x=>x.onclick=()=>{const g=x.dataset.g;st.groups=st.groups.includes(g)?st.groups.filter(z=>z!==g):st.groups.concat(g);st.repl=null;draw();});
+      $$('[data-addg]',sh).forEach(x=>x.onclick=()=>{st.groups=st.groups.concat(x.dataset.addg);st.repl=null;draw();});
+      $$('[data-d]',sh).forEach(x=>x.onclick=()=>{st.dur=+x.dataset.d;draw();});
+      const sf=$('#cshuf',sh);if(sf)sf.onclick=()=>{st.seed++;draw();};
+      const cr=$('#crep',sh);if(cr)cr.onchange=()=>{st.repl=cr.checked;};
+      $$('[data-cx]',sh).forEach(x=>x.onclick=()=>exDetail(x.dataset.cx));
+      $('#cgo',sh).onclick=()=>{if(!b.ex.length)return;S.custPref={groups:st.groups,dur:st.dur,seed:st.seed};
+        S.custom={d:TODAY,groups:st.groups,dur:st.dur,ex:b.ex,of:b.of,replace:(rc&&st.repl)?rc.sid:null};save();audio();closeSheet();startSession('CUST',false);};
+      sh.scrollTop=y;});
+  };
+  draw();
+}
+/* Dauer nur für heute ändern (Startkarte) */
+function durSheet(sid){
+  const cur=effProf(sid).dur,base=prof().dur;
+  openSheet(`<h3>Heute wie lange?</h3><div class="small" style="margin:4px 0 14px">Gilt nur für heute. Die Übungen von sonst bleiben drin, bei mehr Zeit kommen welche dazu, bei weniger Zeit gibt es zuerst weniger Runden.</div>
+    <div class="segs">${DURS.map(d=>`<button class="${d===cur?'on':''}" data-d="${d}">${d}</button>`).join('')}</div>
+    <div class="small" style="margin-top:8px">Minuten. Dein Standard: ${base} Min.</div>
+    ${cur!==base?`<button class="chip" id="dreset" style="margin-top:12px">Zurück auf ${base} Min</button>`:''}`,
+   sh=>{$$('[data-d]',sh).forEach(x=>x.onclick=()=>{const d=+x.dataset.d;S.dayDur=d===base?null:{d:TODAY,sid,dur:d};save();closeSheet();renderHome();toast(d===base?'Wieder Standarddauer.':'Heute '+d+' Minuten.');});
+    const r=$('#dreset',sh);if(r)r.onclick=()=>{S.dayDur=null;save();closeSheet();renderHome();};});
+}
 
 /* ---------------- Lauf-Player ---------------- */
 function startRun(sid){
@@ -968,7 +1091,7 @@ function init(){
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!P.on){const t=ymd(NOW());if(t!==TODAY)renderAll();}});
 }
 window.addEventListener('DOMContentLoaded',init);
-window.__T={renderStep:()=>renderStep(),openSettings:()=>openSettings(),closeSheet:()=>closeSheet(),exDetail:id=>exDetail(id),estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
+window.__T={buildCustom:(g,d,s)=>buildCustom(g,d,s||0),custSheet:()=>custSheet(),durSheet:sid=>durSheet(sid),effProf:sid=>effProf(sid),renderHome:()=>renderHome(),renderStep:()=>renderStep(),openSettings:()=>openSettings(),closeSheet:()=>closeSheet(),exDetail:id=>exDetail(id),estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
 })();
 
 // iOS 26: nach dem Schliessen der Tastatur bleibt der Viewport verschoben, deshalb zuruecksetzen
