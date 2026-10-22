@@ -277,28 +277,38 @@ function ytApi(cb){if(window.YT&&YT.Player)return cb();YTQ.push(cb);if(YTP)retur
 function clipOf(vid){const c=(S.clip||{})[vid]||{};return {s:c.s||0,e:c.e||0};}
 let VP=null,VPT=null;
 function vidBox(vid){return `<div class="vwrap"><div class="vbox"><div id="ytp"></div></div><div class="vctl"><button data-seek="-5">« 5 s</button><button data-seek="5">5 s »</button><button data-snd="1">Ton an</button><button data-clip="s">Clip ab hier</button><button data-clip="e">Ende hier</button><button data-clip="r">Zurücksetzen</button></div></div>`;}
-function vidMount(root,vid){
-  clearInterval(VPT);try{VP&&VP.destroy&&VP.destroy();}catch(e){}VP=null;
+let VCUR='',VFB=null;
+function vidMount(root,vid,fb){
+  clearInterval(VPT);try{VP&&VP.destroy&&VP.destroy();}catch(e){}VP=null;VCUR=vid;VFB=fb||null;
   const host=$('#ytp',root);if(!host)return;
-  const show=()=>{const c=clipOf(vid);const ctl=$('.vctl',root);if(ctl)ctl.dataset.info=c.s||c.e?`Clip ${c.s}s${c.e?' bis '+c.e+'s':''}`:'';};
-  ytApi(()=>{if(!document.body.contains(host))return;const c=clipOf(vid);
-    VP=new YT.Player(host,{videoId:vid,width:'100%',height:'100%',playerVars:{autoplay:1,mute:1,playsinline:1,controls:1,rel:0,modestbranding:1,iv_load_policy:3,start:c.s,fs:1},
-      events:{onReady:e=>{e.target.mute();e.target.seekTo(clipOf(vid).s,true);e.target.playVideo();},
-              onStateChange:e=>{if(e.data===0){e.target.seekTo(clipOf(vid).s,true);e.target.playVideo();}}}});
-    let lastT=0;VPT=setInterval(()=>{try{const c=clipOf(vid);if(!VP||!VP.getCurrentTime)return;const t=VP.getCurrentTime();
+  const show=()=>{const c=clipOf(VCUR);const ctl=$('.vctl',root);if(ctl)ctl.dataset.info=c.s||c.e?`Clip ${c.s}s${c.e?' bis '+c.e+'s':''}`:'';};
+  root._vshow=show;
+  ytApi(()=>{if(!document.body.contains(host)||VCUR!==vid||VP)return;const c=clipOf(vid);
+    try{VP=new YT.Player(host,{videoId:vid,width:'100%',height:'100%',playerVars:{autoplay:1,mute:1,playsinline:1,controls:1,rel:0,modestbranding:1,iv_load_policy:3,start:c.s,fs:1},
+      events:{onReady:e=>{try{e.target.mute();e.target.seekTo(clipOf(VCUR).s,true);e.target.playVideo();}catch(err){}},
+              onStateChange:e=>{try{if(e.data===0){e.target.seekTo(clipOf(VCUR).s,true);e.target.playVideo();}}catch(err){}},
+              onError:()=>{if(VFB&&VFB!==VCUR){const f=VFB;VFB=null;toast('Video nicht verfügbar, zeige das andere');vidSwap(root,f);}else toast('Video nicht verfügbar');}}});}catch(err){VP=null;return;}
+    let lastT=0;VPT=setInterval(()=>{try{const c=clipOf(VCUR);if(!VP||!VP.getCurrentTime)return;const t=VP.getCurrentTime();
       // nur beim normalen Abspielen über das Clip-Ende zurückspringen, nicht wenn du selbst vorspulst
       if(c.e&&t>=c.e&&lastT<c.e&&t-lastT<1.5)VP.seekTo(c.s,true);lastT=t;}catch(e){}},250);
   });
   $$('[data-seek]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();try{const t=Math.max(0,VP.getCurrentTime()+(+b.dataset.seek));VP.seekTo(t,true);VP.playVideo();}catch(err){}});
   $$('[data-snd]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();try{if(VP.isMuted()){VP.unMute();VP.setVolume(100);VP.playVideo();b.textContent='Ton aus';}else{VP.mute();b.textContent='Ton an';}}catch(err){}});
-  $$('[data-clip]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();S.clip=S.clip||{};const cur=S.clip[vid]||{};let t=0;try{t=Math.floor(VP.getCurrentTime());}catch(err){}
+  $$('[data-clip]',root).forEach(b=>b.onclick=e=>{e.stopPropagation();const vid=VCUR;S.clip=S.clip||{};const cur=S.clip[vid]||{};let t=0;try{t=Math.floor(VP.getCurrentTime());}catch(err){}
     if(b.dataset.clip==='s'){cur.s=t;if(cur.e&&cur.e<=t)delete cur.e;toast('Clip startet jetzt bei '+t+' s');}
-    else if(b.dataset.clip==='e'){if(t>(cur.s||0)){cur.e=t;toast('Clip endet bei '+t+' s');VP.seekTo(cur.s||0,true);}}
+    else if(b.dataset.clip==='e'){if(t>(cur.s||0)){cur.e=t;toast('Clip endet bei '+t+' s');try{VP.seekTo(cur.s||0,true);}catch(err){}}}
     else{delete S.clip[vid];toast('Clip zurückgesetzt');try{VP.seekTo(0,true);}catch(err){}}
     if(b.dataset.clip!=='r')S.clip[vid]=cur;save();show();});
   show();
 }
-function vidStop(){clearInterval(VPT);try{VP&&VP.destroy&&VP.destroy();}catch(e){}VP=null;}
+/* Video wechseln ohne den Player neu zu bauen (iOS stürzt beim schnellen Abreißen und Neuaufbau des iframes gern ab) */
+function vidSwap(root,vid,fb){
+  let ok=false;
+  try{if(VP&&VP.loadVideoById&&VP.getIframe&&root.contains(VP.getIframe())){VCUR=vid;VFB=fb||null;VP.loadVideoById({videoId:vid,startSeconds:clipOf(vid).s});ok=true;}}catch(e){ok=false;}
+  if(ok){const sb=$('[data-snd]',root);if(sb)sb.textContent=(()=>{try{return VP.isMuted()?'Ton an':'Ton aus';}catch(e){return 'Ton an';}})();root._vshow&&root._vshow();return;}
+  vidStop();root.innerHTML=vidBox(vid);vidMount(root,vid,fb);
+}
+function vidStop(){clearInterval(VPT);try{VP&&VP.destroy&&VP.destroy();}catch(e){}VP=null;VCUR='';}
 
 /* ---------------- Übungsdetail ---------------- */
 function doseChips(id){
@@ -342,9 +352,12 @@ function exDetail(id){
       bindRate(sh,render);
       $$('.mtoggle button',sh).forEach(b=>b.onclick=()=>{
         $$('.mtoggle button',sh).forEach(o=>o.classList.toggle('on',o===b));
-        const m=$('#dmedia',sh);const f=m.querySelector('.fig');if(f)FIG.unmount(f);
-        vidStop();if(b.dataset.m==='fig'){m.innerHTML=`<div class="fig" data-fig="${id}" data-aspect="1.25"></div>`;mountAll(m);}
-        else{const vid=b.dataset.m==='alt'?v.alt:v.v;m.innerHTML=vidBox(vid);vidMount(m,vid);}
+        const m=$('#dmedia',sh);
+        if(b.dataset.m==='fig'){vidStop();m.innerHTML=`<div class="fig" data-fig="${id}" data-aspect="1.25"></div>`;mountAll(m);return;}
+        const vid=b.dataset.m==='alt'?v.alt:v.v,fb=b.dataset.m==='alt'?v.v:v.alt;
+        if(VCUR===vid&&m.querySelector('.vwrap'))return;
+        const f=m.querySelector('.fig');if(f)FIG.unmount(f);
+        if(m.querySelector('.vwrap'))vidSwap(m,vid,fb);else{vidStop();m.innerHTML=vidBox(vid);vidMount(m,vid,fb);}
       });
     });
   };
@@ -691,11 +704,11 @@ function stepEx(st){
            <div class="logger"><div class="step"><button id="vm">−</button><div class="val"><b id="vv">${P.val}</b><span>Wdh${x.side?' / Seite':''}</span></div><button id="vp">+</button></div></div>`)+
     `${setGrid(id,st)}
      <button class="bigbtn" id="done">${time?I.play+' Start':I.check+' Satz fertig'}</button>`);
-  if(P.media==='v'&&v)vidMount($('#plm'),v.v);
+  if(P.media==='v'&&v)vidMount($('#plm'),v.v,v.alt);
   // Werkzeuge
   bindRate($('#player'),()=>{$$('#player .pl-tools .th').forEach(b=>{const r=rateOf(id);b.classList.toggle('on',(+b.dataset.rate)===r);});});
   const vt=$('#vt');if(vt)vt.onclick=()=>{P.media=P.media==='v'?'fig':'v';const m=$('#plm');const f=m.querySelector('.fig');if(f)FIG.unmount(f);
-    vidStop();m.innerHTML=(P.media==='v'?vidBox(v.v):`<div class="fig" data-fig="${id}" data-aspect="1.3"></div>`)+`<button class="pl-vbtn" id="vt">${P.media==='v'?I.fig+' Animation':I.video+' Video'}</button>`;mountAll(m);if(P.media==='v')vidMount(m,v.v);$('#vt').onclick=vt.onclick;};
+    vidStop();m.innerHTML=(P.media==='v'?vidBox(v.v):`<div class="fig" data-fig="${id}" data-aspect="1.3"></div>`)+`<button class="pl-vbtn" id="vt">${P.media==='v'?I.fig+' Animation':I.video+' Video'}</button>`;mountAll(m);if(P.media==='v')vidMount(m,v.v,v.alt);$('#vt').onclick=vt.onclick;};
   $('#inf').onclick=()=>exDetail(id);
   $('#skp').onclick=()=>skipAsk(id);
   $('#swp').onclick=()=>swapSheet(st.slot,()=>{const nid=S.plan.sel[st.slot];P.steps.forEach(s=>{if(s.k==='ex'&&s.slot===st.slot)s.id=nid;});P.exIds=P.exIds.map(e=>e===id?nid:e);renderStep();});
