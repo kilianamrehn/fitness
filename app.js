@@ -179,6 +179,27 @@ function swapSlot(slot,id){S.plan.sel[slot]=id;S.plan.user[slot]=true;save();}
 /* ---------------- Woche ---------------- */
 const doneWk=()=>S.done[WK]||(S.done[WK]={});
 function markDone(sid){doneWk()[sid]=TODAY;HISTORY[WK]=Object.keys(doneWk()).length;save();}
+function markDoneOn(sid,d){const k=wkKey(parseYmd(d));const w=S.done[k]||(S.done[k]={});w[sid]=d;HISTORY[k]=Object.keys(w).length;save();}
+function unmarkDone(sid){const w=doneWk();const d=w[sid];if(!d)return;delete w[sid];HISTORY[WK]=Object.keys(w).length;
+  const i=(S.sessions||[]).map((x,j)=>x.sid===sid&&x.d===d&&x.manual?j:-1).filter(j=>j>=0).pop();if(i!=null&&i>=0)S.sessions.splice(i,1);save();}
+function logSheet(sid,back){
+  const s=SESS.find(x=>x.id===sid);if(!s)return;
+  const wd=['So','Mo','Di','Mi','Do','Fr','Sa'];const days=[];for(let i=0;i<7;i++){const d=parseYmd(TODAY);d.setDate(d.getDate()-i);days.push(ymd(d));}
+  const lbl=(d,i)=>i===0?'Heute':i===1?'Gestern':`${wd[parseYmd(d).getDay()]} ${fmtD(d).slice(0,5)}`;
+  const mins=[10,15,20,30,45,60];const est=s.run?null:estMin(null,sid);
+  const st={d:TODAY,min:s.run?null:mins.reduce((a,m)=>Math.abs(m-est)<Math.abs(a-est)?m:a,mins[0])};
+  const draw=()=>{const k=wkKey(parseYmd(st.d));const other=k!==WK;const taken=(S.done[k]||{})[sid];
+    openSheet(`<div class="pat">${esc(s.name)}</div><h3>Training nachtragen</h3><div class="small" style="margin:4px 0 12px">Für Einheiten, die du ohne die App gemacht oder vergessen hast abzuhaken. Zählt für die Woche und die Serie.</div>
+      <h2>Wann?</h2><div class="dchips">${days.map((d,i)=>`<button class="${d===st.d?'on':''}" data-ld="${d}">${lbl(d,i)}</button>`).join('')}</div>
+      ${s.run?'':`<h2 style="margin-top:14px">Wie lange etwa?</h2><div class="segs">${mins.map(m=>`<button class="${m===st.min?'on':''}" data-lm="${m}">${m}</button>`).join('')}</div>`}
+      ${other?`<div class="cnote" style="margin-top:12px">Das war letzte Woche und zählt für letzte Woche.${taken?' Dort ist diese Einheit schon abgehakt.':''}</div>`:''}
+      <div class="btnrow" style="margin-top:16px"><button class="btn pri" id="lgo" ${taken?'disabled':''}>${I.check} Eintragen</button></div>`,
+    sh=>{$$('[data-ld]',sh).forEach(b=>b.onclick=()=>{st.d=b.dataset.ld;draw();});
+      $$('[data-lm]',sh).forEach(b=>b.onclick=()=>{st.min=+b.dataset.lm;draw();});
+      $('#lgo',sh).onclick=()=>{if(taken)return;markDoneOn(sid,st.d);S.sessions.push({d:st.d,sid,...(s.run?{ex:runIdOf(sid)}:{min:st.min}),manual:true});
+        S.sessions.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);save();toast('Nachgetragen.');closeSheet();renderAll();};});};
+  draw();
+}
 function lastStrengthDate(){let best=null;for(const wk in S.done)for(const sid in S.done[wk]){if(isRun(sid))continue;const d=S.done[wk][sid];if(!best||d>best)best=d;}return best;}
 function suggestion(){
   const dn=doneWk();const yest=ymd(new Date(NOW().getTime()-DAY));
@@ -425,9 +446,9 @@ function sessSheet(sid){
      <ul class="cues">${EX[rid].c.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>
      ${POOLS[cd.pool].length>1?`<h2 style="margin-top:14px">Diese Woche</h2>`:''}
      <div class="altlist">${(POOLS[cd.pool].length>1?POOLS[cd.pool]:[]).map(id=>`<button class="excard ${id===rid?'':''}" data-run="${id}"><div class="t"><b>${esc(EX[id].n)} ${id===rid?'<span class="tag rot">gewählt</span>':''}</b><span>${esc(EX[id].tgt)} · ${esc(EX[id].c[0])}</span></div><div class="thumbs"><button class="th up ${rateOf(id)===1?'on':''}" data-rate="1" data-id="${id}">${I.up}</button><button class="th down ${rateOf(id)===-1?'on':''}" data-rate="-1" data-id="${id}">${I.down}</button></div></button>`).join('')}</div>
-     <div class="btnrow" style="margin-top:14px"><button class="btn pri" id="go">${I.play} Timer starten</button><button class="btn ghost" id="mk" style="flex:0 0 auto;padding:0 16px">${done?'Erledigt ✓':'Abhaken'}</button></div>`,
+     <div class="btnrow" style="margin-top:14px"><button class="btn pri" id="go">${I.play} Timer starten</button><button class="btn ghost" id="mk" style="flex:0 0 auto;padding:0 16px">${done?'Erledigt ✓':'Abhaken'}</button></div>${done?`<button class="linkbtn" id="undo">Doch nicht erledigt? Zurücksetzen</button>`:''}`,
     sh=>{bindRate(sh,()=>sessSheet(sid));$$('[data-run]',sh).forEach(b=>b.onclick=e=>{if(e.target.closest('.th'))return;S.week[key]=b.dataset.run;save();sessSheet(sid);renderHome();});
-      $('#go',sh).onclick=()=>{audio();closeSheet();startRun(sid);};$('#mk',sh).onclick=()=>{if(!done){markDone(sid);S.sessions.push({d:TODAY,sid,ex:runIdOf(sid),manual:true});save();toast('Abgehakt.');}closeSheet();renderAll();};});
+      $('#go',sh).onclick=()=>{audio();closeSheet();startRun(sid);};$('#mk',sh).onclick=()=>{if(done){closeSheet();return;}logSheet(sid);};const ud=$('#undo',sh);if(ud)ud.onclick=()=>{unmarkDone(sid);toast('Zurückgesetzt.');closeSheet();renderAll();};});
     return;}
   const ex=sessEx(sid);const bonus=S.week.bonus[sid]||{id:null,theme:''};
   openSheet(`<div class="pat">${esc(s.sub)}</div><h3>${esc(s.name)}</h3>${done?`<div class="small" style="margin-top:4px">Erledigt am ${fmtD(done)}</div>`:''}
@@ -438,12 +459,14 @@ function sessSheet(sid){
    ${bonus.id?`<h2>Bonus · optional · ${esc(bonus.theme)}</h2>
    <div class="excard" data-exd="${bonus.id}"><div class="fig" data-fig="${bonus.id}" data-aspect="1"></div><div class="t"><b>${esc(EX[bonus.id].n)}</b><span>2 Runden am Ende, wenn du Lust hast</span></div></div>`:''}
    <div class="btnrow" style="margin-top:16px"><button class="btn pri" id="go">${I.play} ${done?'Nochmal':'Start'}</button><button class="btn ghost" id="gos" style="flex:0 0 auto;padding:0 16px">Express</button></div>
-   <div class="small" style="margin-top:8px">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(stationsOf(sid)*1.2))} Minuten, ohne Aufwärmen. Zählt trotzdem für die Woche.</div>`,
+   <div class="small" style="margin-top:8px">Express: nur 1 Runde, etwa ${Math.max(4,Math.round(stationsOf(sid)*1.2))} Minuten, ohne Aufwärmen. Zählt trotzdem für die Woche.</div>
+   ${done?`<button class="linkbtn" id="undo">Doch nicht erledigt? Zurücksetzen</button>`:`<button class="linkbtn" id="logb">Schon gemacht? Nachtragen</button>`}`,
   sh=>{bindRate(sh,()=>{sessSheet(sid);renderHome();});
     $$('[data-exd]',sh).forEach(c=>c.onclick=e=>{if(e.target.closest('button'))return;exDetail(c.dataset.exd);});
     $$('[data-swap]',sh).forEach(b=>b.onclick=e=>{e.stopPropagation();swapSheet(b.dataset.swap,()=>{sessSheet(sid);renderHome();});});
     $('#go',sh).onclick=()=>{audio();closeSheet();startSession(sid,false);};
-    $('#gos',sh).onclick=()=>{audio();closeSheet();startSession(sid,true);};});
+    $('#gos',sh).onclick=()=>{audio();closeSheet();startSession(sid,true);};
+    const lb=$('#logb',sh);if(lb)lb.onclick=()=>logSheet(sid);const ud=$('#undo',sh);if(ud)ud.onclick=()=>{unmarkDone(sid);toast('Zurückgesetzt.');closeSheet();renderAll();};});
 }
 function swapSheet(slot,after){
   const pool=slotsAll().find(s=>s.slot===slot).pool;const cur=S.plan.sel[slot];
@@ -1136,7 +1159,7 @@ function init(){
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!P.on){const t=ymd(NOW());if(t!==TODAY)renderAll();}});
 }
 window.addEventListener('DOMContentLoaded',init);
-window.__T={buildCustom:(g,d,s)=>buildCustom(g,d,s||0),custSheet:r=>custSheet(r),durSheet:sid=>durSheet(sid),effProf:sid=>effProf(sid),renderHome:()=>renderHome(),renderStep:()=>renderStep(),openSettings:()=>openSettings(),closeSheet:()=>closeSheet(),exDetail:id=>exDetail(id),estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
+window.__T={logSheet:sid=>logSheet(sid),sessSheet:sid=>sessSheet(sid),buildCustom:(g,d,s)=>buildCustom(g,d,s||0),custSheet:r=>custSheet(r),durSheet:sid=>durSheet(sid),effProf:sid=>effProf(sid),renderHome:()=>renderHome(),renderStep:()=>renderStep(),openSettings:()=>openSettings(),closeSheet:()=>closeSheet(),exDetail:id=>exDetail(id),estMin,S:()=>S,P,LOG:()=>LOG,HISTORY:()=>HISTORY,startSession,startRun,setTab,ensurePlan,SESS:()=>SESS,cfgOf,prefill,suggestion,sessEx,setProfile:p=>{S.profile=p;SESS=sessList();S.plan=null;S.week=null;ensurePlan();},setDay:d=>{TODAY=d;}};
 })();
 
 // iOS 26: nach dem Schliessen der Tastatur bleibt der Viewport verschoben, deshalb zuruecksetzen
