@@ -1536,3 +1536,123 @@ const GT=gait(19);
   props:[{t:'floor',y:FL},{t:'mat',x1:-95,x2:70,y:FL-3},{t:'kb',j:'ha1',down:90}],
   frames:[T({a:arm(-90)},700,400),T({a:arm(-125)},700),T({a:arm(-150)},800),T({a:arm(-168)},900,350),T({a:arm(-150)},600),T({a:arm(-125)},600)]};}
 })(window.EXA);
+window.EXA=window.EXA||{};
+(function(E){ const FL=4;
+// Brust: Schraeg-Liegestuetz, Liegestuetz mit erhoehten Fuessen, Butterfly mit Band, Kurzhantel-Fliegende (Boden).
+const R=Math.PI/180;
+const M=(...o)=>Object.assign({},...o);
+const r1=v=>Math.round(v*10)/10, r2=v=>Math.round(v*100)/100;
+const D=a=>[Math.cos(a*R),Math.sin(a*R)];
+const add=(p,v,s)=>[p[0]+v[0]*(s===undefined?1:s),p[1]+v[1]*(s===undefined?1:s)];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const Ln=v=>Math.hypot(v[0],v[1]), A_=v=>r1(Math.atan2(v[1],v[0])/R);
+const unit=v=>{const l=Ln(v)||1;return [v[0]/l,v[1]/l];};
+const lerp=(a,b,t)=>a+(b-a)*t, lerp2=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t)];
+const cl=v=>Math.max(-1,Math.min(1,v));
+function seg(k,v,L0){const o={};const m=k.match(/[12]$/);const base=k.replace(/[12]$/,'');o[k]=A_(v);o['s_'+base+(m?m[0]:'')]=r2(Math.min(1,Ln(v)/L0));return o;}
+function ik2(p,q,L1,L2,pick){const v=sub(q,p);const d=Math.max(Math.abs(L1-L2)+0.5,Math.min(Ln(v),L1+L2-0.05));const b=Math.atan2(v[1],v[0]);
+ const al=Math.acos(cl((L1*L1+d*d-L2*L2)/(2*L1*d)));
+ const S=[1,-1].map(s=>{const a1=b+s*al;const m=add(p,[Math.cos(a1),Math.sin(a1)],L1);return {m,a1:r1(a1/R),a2:A_(sub(q,m))};});
+ return pick(S[0].m,S[1].m)?S[0]:S[1];}
+const hipOf=(an,th,sh)=>add(add(an,D(sh),-43),D(th),-45);
+const shOf=(pel,t)=>add(pel,D(t),46);
+const armTo=(S,H,pick,sd)=>{const s=ik2(S,H,29,26,pick);const k=sd||'';return {['uarm'+k]:s.a1,['farm'+k]:s.a2};};
+
+// ---------- Liegestuetz-Generator (Seitenansicht, Kopf rechts, Koerper starr) ----------
+// Zehen fix bei T, Koerper ist eine gerade Linie (Bein = Rumpf-Winkel), Fuss senkrecht zum Bein (auf den Ballen).
+// Haende fix bei H (Anker), Zehen per pin auf ihrer Hoehe; Keyframes so gelegt, dass die Zehen < 2 Einheiten gleiten.
+const pelT=(T,t)=>add(add(T,D(t+90),-14),D(t),88);
+const shT=(T,t)=>shOf(pelT(T,t),t);
+const chestT=(T,t)=>add(pelT(T,t),D(t),35);
+function tSolve(f,lo,hi){let b=lo,e=1e9;for(let t=lo;t<=hi;t+=0.02){const q=Math.abs(f(t));if(q<e){e=q;b=t;}}return b;}
+// Arm per IK zur fixen Hand. Projizierte Oberarmlaenge nimmt linear von 1 auf SU ab (Ellbogen ~45 Grad abgespreizt
+// -> in der Seitenansicht verkuerzt), Unterarm voll. Ellbogen zeigt nach hinten-oben (Richtung Fuesse).
+function puGen(T,H,tTop,tBot,SU,hd){
+ return k=>{const t=lerp(tTop,tBot,k),S=shT(T,t),lu=29*lerp(1,SU,k);
+  const v=sub(H,S),cr=m=>v[0]*(m[1]-S[1])-v[1]*(m[0]-S[0]);const s=ik2(S,H,lu,26,(m0,m1)=>cr(m0)>cr(m1));
+  return M({torso:r1(t),head:r1(t+(hd||0)),thigh:r1(t+180),shin:r1(t+180),foot:r1(t+90),bend:0,uarm:s.a1,s_uarm:r2(lu/29),farm:s.a2});};}
+
+// ---------- Schraeg-Liegestuetz (Haende erhoeht auf Bank/Stuhlkante) ----------
+// Wie im NASM-Video: Haende schulterbreit auf der Bankkante, Koerper schraeg und gerade von Kopf bis Ferse,
+// Fussballen am Boden. Oben Arme gestreckt, Haende knapp vor den Schultern. Absenken bis die Brust knapp
+// ueber der Kante ist (Ellbogen ~90 Grad, 45 Grad abgespreizt), wieder hochdruecken. Nur die Ellbogen/Schultern bewegen.
+{const BY=-50,T=[0,FL-1],Hy=BY-4;
+ // unten: Brustvorderseite ~4 Einheiten ueber der Bankoberkante; Haende dann auf Hoehe der unteren Brust
+ const tBot=tSolve(t=>{const c=add(chestT(T,t),D(t+90),12.5);return c[1]-(BY-4);},-80,0);
+ const H=[shT(T,tBot)[0]-15,Hy]; // Haende oben leicht vor, unten leicht hinter den Schultern (Rotation um die Zehen)
+ const tTop=tSolve(t=>Ln(sub(shT(T,t),H))-54.6,-80,tBot);
+ const pose=puGen(T,H,tTop,tBot,0.5,-4);
+ E.schraegls={view:'side',floor:FL,hl:['uarm','torso'],anchor:{j:'ha1',at:H},pin:{j:'to1',y:T[1]},
+  props:[{t:'floor',y:FL},{t:'bench',x:H[0]-12,y:BY,w:40,h:-BY+FL}],
+  frames:[{a:pose(0),d:450,hold:250},{a:pose(0.35),d:450},{a:pose(0.7),d:450},{a:pose(1),d:350,hold:200},{a:pose(0.7),d:350},{a:pose(0.35),d:350}]};}
+
+// ---------- Liegestuetz mit erhoehten Fuessen (Fuesse auf Bank ~Kniehoehe) ----------
+// Wie im NASM-Video: Fussspitzen auf der Bank, Haende am Boden unter den Schultern, Koerper eine gerade Linie
+// schraeg nach unten zum Kopf. Absenken bis Brust/Nase knapp ueber dem Boden, hochdruecken.
+{const BY=-46,T=[0,BY-1],Hy=FL-4;
+ const ok=t=>{const c=add(chestT(T,t),D(t+90),12.5);const S=shT(T,t);const nk=add(pelT(T,t),D(t),50);const hc=add(nk,D(t),15);
+  return Math.max(c[1]-(FL-5),hc[1]+10.5-(FL-3));};
+ const tBot=tSolve(t=>ok(t),0,45);const Sb=shT(T,tBot);const H=[Sb[0]+1,Hy]; // Haende unter den Schultern
+ const tTop=tSolve(t=>Ln(sub(shT(T,t),H))-54.6,-10,tBot);
+ const pose=puGen(T,H,tTop,tBot,0.4,-6);const KA=0.45,KB=0.8;
+ E.declinels={view:'side',floor:FL,hl:['uarm','torso'],anchor:{j:'ha1',at:H},pin:{j:'to1',y:T[1]},
+  props:[{t:'floor',y:FL},{t:'bench',x:-30,y:BY,w:40,h:-BY+FL}],
+  frames:[{a:pose(0),d:450,hold:250},{a:pose(KA),d:450},{a:pose(KB),d:450},{a:pose(1),d:350,hold:200},{a:pose(KB),d:350},{a:pose(KA),d:350}]};}
+
+// ---------- 3D-Arm in der Frontansicht ----------
+// Projektion eines 3D-Vektors (x rechts, y unten, z zum Betrachter) auf Winkel + Verkuerzung.
+const proj=(v,L0,key)=>seg(key,[v[0]*L0,v[1]*L0],L0);
+const norm3=v=>{const l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];};
+
+// ---------- Butterfly mit Band (Frontansicht) ----------
+// Band am Tueranker hinter dem Athleten auf Brusthoehe. Stand, leichte Vorlage. Arme leicht gebeugt, der
+// Ellbogenwinkel bleibt fix (Arm = starrer Bogen), Bewegung nur im Schultergelenk (horizontale Adduktion):
+// Start weit offen, Haende knapp hinter der Koerperlinie; Ende Haende treffen sich vor der Brust.
+// Frontansicht: die Umarmungsbewegung liegt fast in der Bildebene; Tuer hinter dem Athleten, Baender laufen
+// zum Anker hinter dem Rumpf (verdeckt, sichtbar zwischen Arm und Rumpf).
+{const BETA=32, D0=8, D1=30; // Ellbogenbeugung (Grad, fix), Neigung der Armebene nach unten: Start / Ende
+ const arm=(phi,g,del)=>{ // starrer Arm: lokal (seitlich, waagerecht) -> um Vorwaertsachse um del senken -> um Hochachse um phi nach vorn
+  const w=norm3([0,-0.35,1]);
+  const u0=[g,0,0],f0=norm3([g*Math.cos(BETA*R),w[1]*Math.sin(BETA*R),w[2]*Math.sin(BETA*R)]);
+  const sd=g*Math.sin(del*R),cd=Math.cos(del*R);
+  const rz=v=>[v[0]*cd-v[1]*sd,v[0]*sd+v[1]*cd,v[2]];
+  const ry=v=>[v[0]*Math.cos(phi*R)-g*v[2]*Math.sin(phi*R),v[1],g*v[0]*Math.sin(phi*R)+v[2]*Math.cos(phi*R)];
+  return {u:ry(rz(u0)),f:ry(rz(f0))};};
+ const PH0=-18;const delOf=phi=>lerp(D0,D1,cl((phi-PH0)/(95-PH0)));
+ const base={torso:-90,s_torso:0.97,head:-90,s_head:0.85,thigh1:93,s_thigh1:0.92,shin1:91,thigh2:88,s_thigh2:0.97,shin2:90,s_shin2:0.94,foot1:180,foot2:0,s_foot:0.6};
+ const pose=phi=>{const o=M(base);for(const [g,s] of [[-1,1],[1,2]]){const a=arm(phi,g,delOf(phi));Object.assign(o,proj(a.u,29,'uarm'+s),proj(a.f,26,'farm'+s));}return o;};
+ // phi fuer "Haende treffen sich": Hand-x relativ zur Schulter = -19+4
+ const phiEnd=tSolve(p=>{const a=arm(p,1,delOf(p));return 19+(29*a.u[0]+26*a.f[0])-4;},40,130);
+ const P0=[0,-88];
+ const ANC=[0,-116]; // Tueranker auf Brusthoehe direkt hinter dem Athleten
+ E.bandfly={view:'front',floor:FL,hl:['torso','uarm'],anchor:{j:'pelvis',at:P0},
+  props:[{t:'floor',y:FL},{t:'box',x:-42,y:-218,w:84,h:218+FL,layer:'back'},{t:'band',from:'ha1',to:ANC,layer:'back'},{t:'band',from:'ha2',to:ANC,layer:'back'}],
+  frames:[{a:pose(PH0),d:600,hold:300},{a:pose(lerp(PH0,phiEnd,0.33)),d:500},{a:pose(lerp(PH0,phiEnd,0.67)),d:600},{a:pose(phiEnd),d:900,hold:300},
+          {a:pose(lerp(PH0,phiEnd,0.67)),d:800},{a:pose(lerp(PH0,phiEnd,0.33)),d:700}]};}
+
+// ---------- Kurzhantel-Fliegende am Boden (erhoehte Ansicht vom Kopfende) ----------
+// Rueckenlage auf der Matte, Knie gebeugt, Fuesse flach. Kamera hinter dem Kopf, ~42 Grad von oben (wie die typische
+// Kameraposition hinter der Bank): Kopf unten im Bild, Rumpf verkuerzt nach oben, Knie oben. Der Armbogen liegt in der
+// Ebene quer zum Koerper und damit fast in der Bildebene.
+// Oben: Arme senkrecht ueber den Schultern, Hanteln (neutraler Griff) treffen sich ueber der Brust.
+// Ellbogen leicht gebeugt, Winkel fix. Unten: Oberarme liegen seitlich auf dem Boden (natuerlicher Stopp),
+// Ellbogen etwas Richtung Huefte (~75 Grad Abduktion), Haende etwa auf Schulterhoehe.
+{const EL=62, ce=Math.cos(EL*R), se=Math.sin(EL*R);
+ const pr3=v=>[v[0],-v[1]*ce-v[2]*se]; // v=[x, Hoehe ueber Boden, Richtung Fuesse (weg von der Kamera)]
+ const SH=11, BETA=28;
+ const arm=(th,g)=>{const tilt=0.2*Math.sin(Math.max(0,th)*R);
+  const u=norm3([g*Math.sin(th*R),Math.cos(th*R),tilt]),f=norm3([g*Math.sin((th-BETA)*R),Math.cos((th-BETA)*R),tilt]);return {u,f};};
+ const thTop=tSolve(t=>{const a=arm(t,1);return 19+29*a.u[0]+26*a.f[0]-9.5;},-20,30);
+ const thBot=tSolve(t=>{const a=arm(t,1);return SH+29*a.u[1]-4.6;},60,130); // Ellbogen liegt am Boden
+ const kneeH=46, thV=[0,kneeH-SH,Math.sqrt(45*45-(kneeH-SH)**2)], shV=[0,4-kneeH,Math.sqrt(43*43-(kneeH-4)**2)];
+ const leg={...seg('thigh1',pr3([3,thV[1],thV[2]]),45),...seg('thigh2',pr3([-3,thV[1],thV[2]]),45),
+  ...seg('shin1',pr3([1,shV[1],shV[2]]),43),...seg('shin2',pr3([-1,shV[1],shV[2]]),43),foot:-90,s_foot:r2(se)};
+ const base=M({torso:90,s_torso:r2(se),head:90,s_head:r2(13*se/15)},leg);
+ const pose=th=>{const o=M(base);for(const [g,s] of [[1,1],[-1,2]]){const a=arm(th,g);
+   Object.assign(o,seg('uarm'+s,pr3(a.u.map(c=>c*29)),29),seg('farm'+s,pr3(a.f.map(c=>c*26)),26));}return o;};
+ const P0=[0,-SH*ce];
+ E.dbfly={view:'front',hl:['torso','uarm'],anchor:{j:'pelvis',at:P0},
+  props:[{t:'box',x:-100,y:-75,w:200,h:140},{t:'db',j:'ha1',o:90,s:0.8},{t:'db',j:'ha2',o:90,s:0.8}],
+  frames:[{a:pose(thTop),d:900,hold:250},{a:pose(lerp(thTop,thBot,0.33)),d:700},{a:pose(lerp(thTop,thBot,0.67)),d:800},{a:pose(thBot),d:600,hold:250},
+          {a:pose(lerp(thTop,thBot,0.67)),d:550},{a:pose(lerp(thTop,thBot,0.33)),d:600}]};}
+})(window.EXA);
