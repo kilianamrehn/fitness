@@ -1656,3 +1656,126 @@ const norm3=v=>{const l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]
   frames:[{a:pose(thTop),d:900,hold:250},{a:pose(lerp(thTop,thBot,0.33)),d:700},{a:pose(lerp(thTop,thBot,0.67)),d:800},{a:pose(thBot),d:600,hold:250},
           {a:pose(lerp(thTop,thBot,0.67)),d:550},{a:pose(lerp(thTop,thBot,0.33)),d:600}]};}
 })(window.EXA);
+
+// ===== Fix-Runde: calf, archer, pushplus, gorillarow, stuhldips, ccf (ueberschreibt fruehere Definitionen) =====
+(function(E){ const FL=4;
+const RD=Math.PI/180, D=a=>[Math.cos(a*RD),Math.sin(a*RD)];
+const add=(p,v,s)=>[p[0]+v[0]*(s===undefined?1:s),p[1]+v[1]*(s===undefined?1:s)], sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const Ln=v=>Math.hypot(v[0],v[1]), A_=v=>Math.round(Math.atan2(v[1],v[0])/RD*10)/10, r2=v=>Math.round(v*100)/100, r1=v=>Math.round(v*10)/10;
+const lerp=(a,b,t)=>a+(b-a)*t, lerp2=(a,b,t)=>[lerp(a[0],b[0],t),lerp(a[1],b[1],t)];
+const M=(...o)=>Object.assign({},...o);
+const seg=(k,v,L)=>({[k]:A_(v),['s_'+k]:r2(Ln(v)/L)});
+// 2-Gelenk-IK in der Bildebene: Wurzel R, Ziel T, Laengen a,b, sg = Beugerichtung (+1/-1). Liefert Winkel + Mittelgelenk.
+const ik=(R,T,a,b,sg)=>{const v=sub(T,R),d=Math.min(Ln(v),a+b-0.01),base=Math.atan2(v[1],v[0]);
+ const al=Math.acos(Math.max(-1,Math.min(1,(a*a+d*d-b*b)/(2*a*d))));const u=base+sg*al,J=[R[0]+a*Math.cos(u),R[1]+a*Math.sin(u)];
+ return {u:r1(u/RD),l:A_(sub(T,J)),J};};
+const T=(a,d,hold,x)=>M({a,d,hold:hold||0},x||{});
+
+// ---------- 1. Exzentrisches Wadenheben an der Treppe (Seitenansicht) ----------
+// Beide Fussballen auf der Kante der Stufe (Stufe vorn/rechts, Wand dahinter), Fersen haengen frei nach hinten ueber.
+// Nahe Hand liegt leicht an der Wand (fix). Hoch auf die Zehen (Ferse deutlich ueber Stufenniveau), dann langsam
+// absenken bis die Ferse unter Stufenniveau ist (Dehnung). Koerper bleibt aufrecht und gestreckt.
+{const ST=-22;                // Oberkante Stufe (Stufe 26 hoch)
+ const TY=ST-2.4;             // Zehenspitze (Mittellinie Fuss) auf der Stufe
+ const EDGE=[0,ST-2.4];       // Kante: Fussmittellinie liegt hier auf
+ const CB=8;                  // Abstand Fussballen-Kontakt -> Zehenspitze
+ const WH=[31,-122];          // Hand an der Wand
+ const toeFor=f=>f>=0?[CB,TY]:add(EDGE,D(f),CB);  // f>=0: Drehpunkt Zehen; f<0: Drehpunkt Kante
+ const pose=f=>{const to=toeFor(f),an=add(to,D(f),-14);
+  const a={torso:-89,head:-90,thigh:90,shin:90,foot:r1(f),uarm2:93,farm2:88};
+  // Schulter (nahe Seite) aus den Gelenken berechnen
+  const kn=add(an,D(-90),43),pel=add(kn,D(-90),45),sh=add(pel,D(-89),46);
+  const k=ik(sh,WH,29,26,-1);a.uarm1=k.u;a.farm1=k.l;
+  return {a,anchor:{j:'to1',at:[r1(to[0]),r1(to[1])]}};};
+ const fr=(f,d,hold)=>M(pose(f),{d,hold:hold||0});
+ E.calf={view:'side',floor:FL,hl:['shin'],anchor:{j:'to1',at:[CB,TY]},
+  props:[{t:'floor',y:FL},{t:'step',x:0,y:ST,w:44,h:FL-ST},{t:'step',x:44,y:ST-18,w:44,h:FL-ST+18},{t:'post',x:31,y1:-120,y2:ST}],
+  frames:[fr(0,450),fr(26,450),fr(52,700,450),fr(26,1500),fr(0,1500),fr(-30,700,500)]};}
+
+// ---------- 2. Archer-Liegestuetz (Frontansicht, niedrige Kamera vor dem Kopf, wie E.pullthrough) ----------
+// Kopf oben zur Kamera, Schultern breit, Haende sehr breit fix am Boden (Bodenlinie), Rumpf und Beine laufen nach hinten
+// weg (stark verkuerzt), Fuesse fix. Arbeitsseite: Koerper wandert zu dieser Hand und senkt sich, Ellbogen beugt
+// (zeigt nach hinten/aussen); der andere Arm bleibt gestreckt (konstant 55) und liegt flach seitlich aus. Mitte, andere Seite.
+{const HX=50, HY=FL-4, AN=[10,-2];
+ const pose=k=>{ // k in [-1,1]: -1 = Bild links (Seite 1) gebeugt
+  const b=Math.sign(k),q=Math.abs(k),cx=22*k;
+  const lat=31+22*q, ys=Math.sqrt(55*55-lat*lat);          // gestreckter Arm bleibt 55 lang
+  const sts=lerp(0.36,0.17,1-ys/45.4), shY=HY-ys, N=[cx,shY-4], P=[cx,N[1]+50*sts];
+  const a={torso:-90,s_torso:r2((P[1]-N[1])/50),head:-90,s_head:0.1};
+  // Torso nicht ganz senkrecht, da Becken weniger seitlich wandert als die Schultern
+  Object.assign(a,seg('torso',sub(N,P),50));
+  const u=[(N[0]-P[0])/Ln(sub(N,P)),(N[1]-P[1])/Ln(sub(N,P))],pp=[-u[1],u[0]],shB=add(N,u,-4);
+  for(const s of [1,2]){const sg=s===1?-1:1,S=add(shB,pp,sg*19),H=[sg*HX,HY];
+   const bent=(b!==0&&sg===b)?q:0;
+   const mid=lerp2(S,H,0.53),El=lerp2(mid,[H[0]+sg*13,H[1]-15],bent);
+   Object.assign(a,seg('uarm'+s,sub(El,S),29),seg('farm'+s,sub(H,El),26));
+   const hp=add(P,pp,sg*8.5),A=[sg*AN[0],AN[1]],K=lerp2(hp,A,0.5);
+   Object.assign(a,seg('thigh'+s,sub(K,hp),45),seg('shin'+s,sub(A,K),43),{['foot'+s]:90,['s_foot'+s]:0.25});
+  }
+  return {a,P};};
+ // Anker: Becken (Oberkoerper verschiebt sich als Block, Rumpf bleibt senkrecht); Haende/Fuesse weichen zwischen Keyframes max. ~2.4 ab
+ const fr=(k,d,hold,s)=>M(pose(k),{d,hold:hold||0,anchor:{j:'pelvis',at:pose(k).P.map(r1)}});
+ E.archer={view:'front',floor:FL,hl:['uarm','torso'],anchor:{j:'pelvis',at:[0,-30]},
+  props:[{t:'floor',y:FL}],
+  frames:[fr(0,450,300,1),fr(-0.5,500,0,1),fr(-1,500,300,1),fr(-0.5,450,0,1),fr(0,450,300,2),fr(0.5,500,0,2),fr(1,500,300,2),fr(0.5,450,0,2)]};}
+
+// ---------- 3. Liegestuetz Plus (Seitenansicht, Kopf rechts) ----------
+// Zehen fix, Haende fix unter den Schultern. Oben: Arme gestreckt. Plus: Arme bleiben gestreckt, Boden wird weggedrueckt,
+// Schulterblaetter gleiten nach vorn -> oberer Ruecken steigt hoch und rundet leicht (bend -4), halten.
+// Zurueck in den normalen Stuetz, dann normaler Liegestuetz runter und hoch.
+{const TO=[0,FL-1];
+ const shAt=t=>{const lg=D(t+180),ft=D(t+90),td=D(t);const pel=[TO[0]-ft[0]*14-lg[0]*88,TO[1]-ft[1]*14-lg[1]*88];return add(pel,td,46);};
+ const tFor=y=>{let b=0,e=1e9;for(let t=-40;t<=10;t+=0.02){const q=Math.abs(shAt(t)[1]-y);if(q<e){e=q;b=t;}}return b;};
+ const H=[shAt(tFor(FL-4-55))[0],FL-4];
+ const pose=(y,bend,plus)=>{const t=tFor(y),S=shAt(t);const a={torso:r1(t),head:r1(t-2),thigh:r1(t+180),shin:r1(t+180),foot:r1(t+90),bend};
+  const v=sub(H,S),L=Ln(v);
+  if(L>=54.5){a.uarm=a.farm=A_(v);a.s_uarm=r2((L-26)/29);a.farm=A_(v);}
+  else{const El=[H[0]-1,H[1]-26];Object.assign(a,seg('uarm',sub(El,S),29),{farm:A_(sub(H,El))});}
+  return a;};
+ const top=pose(FL-4-55,0), plus=pose(FL-4-62,-5), mid=pose(-36,0), bot=pose(-18,0);
+ E.pushplus={view:'side',floor:FL,hl:['torso','uarm'],anchor:{j:'ha1',at:H},pin:{j:'to1',y:TO[1]},
+  props:[{t:'floor',y:FL}],
+  frames:[T(top,550,250),T(plus,500,450),T(top,450,250),T(mid,500),T(bot,450,200),T(mid,450)]};}
+
+// ---------- 4. KB Gorilla Row (Seitenansicht) ----------
+// Breiter Stand, Hip-Hinge: Huefte deutlich ueber Kniehoehe, Knie maessig gebeugt, Rumpf ~32 Grad ueber der Waagerechten,
+// Ruecken flach, Kopf neutral. Beide KB haengen auf Armlaenge unter den Schultern. Abwechselnd rudern: Ellbogen zieht
+// nach hinten-oben, KB zur Huefte; Neutralframe zwischen den Seiten. Rumpf und Huefte bleiben ruhig.
+{const t=-32,th=62,sh_=99;
+ const kn=add([0,0],D(sh_),-43),pel=add(kn,D(th),-45),S=add(pel,D(t),46);
+ const HANG=[r1(S[0]+1),r1(S[1]+54.5)];
+ const EL=add(S,D(162),29),HIP=add(EL,[0,26]);
+ const base={torso:t,head:t+6,thigh:th,shin:sh_,foot:0,thigh2:th+3,shin2:sh_-2};
+ const arm=(s,k)=>{const h=k===0?HANG:lerp2(HANG,HIP,k);const q=ik(S,h,29,26,1);return {['uarm'+s]:q.u,['farm'+s]:q.l};};
+ const N=M(base,arm(1,0),arm(2,0));
+ E.gorillarow={view:'side',floor:FL,hl:['uarm','torso'],anchor:{j:'an1',at:[0,0]},
+  props:[{t:'floor',y:FL},{t:'kb',j:'ha2',down:90,s:1},{t:'kb',j:'ha1',down:90,s:1}],
+  frames:[T(N,450,300),T(M(N,arm(1,0.55)),350),T(M(N,arm(1,1)),700,300),T(M(N,arm(1,0.55)),450),
+          T(N,450,300),T(M(N,arm(2,0.55)),350),T(M(N,arm(2,1)),700,300),T(M(N,arm(2,0.55)),450)]};}
+
+// ---------- 5. Stuhldips (Seitenansicht) ----------
+// Haende auf der vorderen Sitzkante (Finger nach vorn), Arme oben gestreckt, Becken knapp VOR der Sitzflaeche (nicht
+// darauf), Knie ~90 Grad, Fuesse flach fix. Absenken durch Beugen der Ellbogen (zeigen nach hinten) bis der Oberarm
+// ~waagerecht ist; Huefte sinkt nah am Stuhl senkrecht ab. Hochdruecken bis die Arme gestreckt sind.
+{const H=[0,-48],A=[64,0],TS=-91;
+ const S0=add(H,D(-74),54.6), EB=add(H,D(-116),26), S1=add(EB,D(0),29);
+ const pose=k=>{const S=lerp2(S0,S1,k),P=add(S,D(TS),-46);
+  const a={torso:TS,head:-90,foot:0};
+  const v=ik(S,H,29,26,1);a.uarm=v.u;a.farm=v.l;
+  const l=ik(P,A,45,43,-1);a.thigh=l.u;a.shin=l.l;
+  return a;};
+ E.stuhldips={view:'side',floor:FL,hl:['uarm'],anchor:{j:'ha1',at:H},
+  props:[{t:'floor',y:FL},{t:'bench',x:-50,y:-44,w:53,h:48}],
+  frames:[T(pose(0),800,300),T(pose(0.5),700),T(pose(1),550,250),T(pose(0.5),500)]};}
+
+// ---------- 6. Kraniozervikale Flexion (Rueckenlage, Kopf links) ----------
+// Kinn wird Richtung Kehle gezogen (kleines Nicken), Hinterkopf bleibt am Boden und gleitet leicht, Nacken flacht ab.
+{const P0=[0,FL-11];
+ const legs=(()=>{const k=ik(P0,[36,FL-4],45,43,-1);return {thigh:k.u,shin:k.l,foot:0};})();
+ const HAND=add(add(P0,D(180),2),[0,1]);
+ const pose=(tt,hd,sh)=>{const N=add(P0,D(tt),50),Sh=add(N,D(tt),-4);const q=ik(Sh,[8,-5],29,26,1);
+  return M({torso:tt,head:hd,s_head:sh,uarm:q.u,farm:q.l,bend:r2(27.5*Math.sin(tt*RD))},legs);}; // bend haelt die Brust am Boden
+ E.ccf={view:'side',floor:FL,hl:[],anchor:{j:'pelvis',at:P0},
+  props:[{t:'floor',y:FL},{t:'mat',x1:-85,x2:60,y:FL-3}],
+  frames:[T(pose(181,170,1),800,700),T(pose(177,193,0.93),700,2000)]};}
+})(window.EXA);
